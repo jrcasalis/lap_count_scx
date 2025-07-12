@@ -1,0 +1,21 @@
+# Requisitos para el proyecto Controlador LED
+# Este archivo es principalmente informativo ya que MicroPython
+# no usa pip para gestión de dependencias
+
+# MicroPython firmware para Raspberry Pi Pico 2W
+# Descargar desde: https://micropython.org/download/rp2-pico/
+
+# Dependencias incluidas en MicroPython:
+# - machine (para control de GPIO)
+# - network (para conexión WiFi)
+# - socket (para servidor web)
+# - json (para respuestas JSON)
+# - time (para delays y timing)
+
+# Para desarrollo local (opcional):
+# - Thonny IDE (recomendado)
+# - rshell (para transferencia de archivos)
+# - ampy (alternativa para transferencia de archivos)
+
+# Nota: Las dependencias de MicroPython están incluidas en el firmware
+# y no necesitan instalación adicional. Este archivo es para documentación. 
