@@ -28,7 +28,7 @@ class LEDController:
         """Enciende el LED"""
         self.pin.value(1)
         self.is_on = True
-        self.display.display_letter('R')  # Mostrar 'R' en el display
+        self.display.scroll_text('ROJO')  # Mostrar 'ROJO' deslizándose
         print("LED encendido")
         
     def turn_off(self):

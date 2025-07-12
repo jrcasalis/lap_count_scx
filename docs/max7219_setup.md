@@ -3,8 +3,8 @@
 ## Descripción
 
 El display MAX7219 es una matriz de LEDs de 8x8 que se integra con el controlador LED para mostrar el estado del LED rojo:
-- **"R"**: Cuando el LED rojo está encendido
-- **"N"**: Cuando el LED rojo está apagado
+- **"ROJO"**: Se desplaza por el display cuando el LED rojo está encendido
+- **"N"**: Se muestra cuando el LED rojo está apagado
 
 ## Conexiones Hardware
 
@@ -51,6 +51,9 @@ display = MAX7219Display(din_pin=2, cs_pin=3, clk_pin=4)
 display.display_letter('R')  # Muestra "R"
 display.display_letter('N')  # Muestra "N"
 
+# Desplazar texto
+display.scroll_text('ROJO')  # Desplaza "ROJO" por el display
+
 # Limpiar display
 display.clear_display()
 
@@ -60,7 +63,7 @@ display.cleanup()
 
 #### Integración Automática
 El display se integra automáticamente con el controlador LED:
-- Cuando se enciende el LED: muestra "R"
+- Cuando se enciende el LED: desplaza "ROJO" por el display
 - Cuando se apaga el LED: muestra "N"
 
 ## Patrones de Letras
@@ -90,16 +93,6 @@ El display se integra automáticamente con el controlador LED:
 ```
 
 ## Pruebas
-
-### Ejemplo de Prueba
-Ejecuta `examples/test_max7219_simple.py` para probar el display:
-
-```bash
-# En la Raspberry Pi Pico
-# Copia el archivo test_max7219_simple.py a la Pico
-# Luego ejecuta:
-exec(open('test_max7219_simple.py').read())
-```
 
 ### Verificación
 1. El display debe mostrar "R" por 3 segundos

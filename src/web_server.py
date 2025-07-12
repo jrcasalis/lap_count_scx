@@ -9,18 +9,18 @@ import gc
 import os
 
 class WebServer:
-    def __init__(self, host, port, led_controller):
+    def __init__(self, host, port, race_controller):
         """
         Inicializa el servidor web
         
         Args:
             host (str): Dirección IP del servidor
             port (int): Puerto del servidor
-            led_controller: Instancia del controlador LED
+            race_controller: Instancia del controlador de carrera
         """
         self.host = host
         self.port = port
-        self.led_controller = led_controller
+        self.race_controller = race_controller
         self.server_socket = None
         self.setup_socket()
         
@@ -35,18 +35,25 @@ class WebServer:
     def handle_requests(self):
         """Maneja las peticiones HTTP entrantes"""
         try:
+            # Sin timeout para aceptar conexiones
             client_socket, address = self.server_socket.accept()
+            print(f"Petición de {address}")
+            
+            # Configurar timeout para la lectura
+            client_socket.settimeout(2.0)
             request = client_socket.recv(1024).decode('utf-8')
             
             if request:
                 response = self.process_request(request)
-                # Enviar respuesta en chunks si es necesario
+                # Enviar respuesta inmediatamente
                 self.send_response(client_socket, response)
             
             client_socket.close()
             
-        except OSError:
-            # No hay peticiones pendientes
+        except OSError as e:
+            # No hay peticiones pendientes - esto es normal
+            if "timed out" not in str(e) and "110" not in str(e):
+                print(f"Error en handle_requests: {e}")
             pass
             
     def send_response(self, client_socket, response):
@@ -80,6 +87,12 @@ class WebServer:
         # Rutas de la API
         if path == "/":
             return self.serve_index()
+        elif path == "/api/lap/increment":
+            return self.api_lap_increment()
+        elif path == "/api/lap/reset":
+            return self.api_lap_reset()
+        elif path == "/api/lap/status":
+            return self.api_lap_status()
         elif path == "/api/led/on":
             return self.api_led_on()
         elif path == "/api/led/off":
@@ -127,9 +140,37 @@ class WebServer:
             return self.http_response("404 Not Found", "text/plain", "JS no encontrado")
         
         
+    def api_lap_increment(self):
+        """API: Incrementar vuelta"""
+        success = self.race_controller.increment_lap()
+        status = self.race_controller.get_race_status()
+        return self.json_response({
+            "success": success,
+            "message": "Vuelta incrementada" if success else "Ya se alcanzó el máximo",
+            "race_status": status
+        })
+    
+    def api_lap_reset(self):
+        """API: Reiniciar carrera"""
+        self.race_controller.reset_race()
+        status = self.race_controller.get_race_status()
+        return self.json_response({
+            "success": True,
+            "message": "Carrera reiniciada",
+            "race_status": status
+        })
+    
+    def api_lap_status(self):
+        """API: Obtener estado de la carrera"""
+        status = self.race_controller.get_race_status()
+        return self.json_response({
+            "success": True,
+            "race_status": status
+        })
+    
     def api_led_on(self):
         """API: Encender LED"""
-        self.led_controller.turn_on()
+        self.race_controller.led_controller.turn_on()
         return self.json_response({
             "success": True,
             "is_on": True,
@@ -138,7 +179,7 @@ class WebServer:
         
     def api_led_off(self):
         """API: Apagar LED"""
-        self.led_controller.turn_off()
+        self.race_controller.led_controller.turn_off()
         return self.json_response({
             "success": True,
             "is_on": False,
@@ -147,8 +188,8 @@ class WebServer:
         
     def api_led_toggle(self):
         """API: Alternar LED"""
-        self.led_controller.toggle()
-        status = self.led_controller.get_status()
+        self.race_controller.led_controller.toggle()
+        status = self.race_controller.led_controller.get_status()
         return self.json_response({
             "success": True,
             "is_on": status["is_on"],
@@ -157,7 +198,7 @@ class WebServer:
         
     def api_led_status(self):
         """API: Obtener estado del LED"""
-        status = self.led_controller.get_status()
+        status = self.race_controller.led_controller.get_status()
         return self.json_response({
             "success": True,
             "is_on": status["is_on"],

@@ -9,39 +9,53 @@
 <body>
     <div class="container">
         <header>
-            <h1>🔴 Controlador LED</h1>
+            <h1>🏁 Controlador de Carrera</h1>
             <p>Raspberry Pi Pico 2W</p>
         </header>
         
         <main>
-            <div class="led-status">
-                <div class="led-indicator" id="ledIndicator">
-                    <div class="led-light" id="ledLight"></div>
+            <div class="race-status">
+                <div class="lap-counter">
+                    <h3>Contador de Vueltas</h3>
+                    <div class="lap-display">
+                        <span id="currentLap">0</span>
+                        <span class="separator">/</span>
+                        <span id="maxLaps">10</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p id="raceStatus">Listo para comenzar</p>
                 </div>
-                <p id="statusText">Estado: Apagado</p>
             </div>
             
             <div class="controls">
-                <button class="btn btn-primary" onclick="turnOn()">
-                    <span class="icon">🔴</span>
-                    Encender
+                <button class="btn btn-primary" onclick="incrementLap()">
+                    <span class="icon">🏁</span>
+                    Incrementar Vuelta
                 </button>
                 
-                <button class="btn btn-secondary" onclick="turnOff()">
-                    <span class="icon">⚫</span>
-                    Apagar
-                </button>
-                
-                <button class="btn btn-toggle" onclick="toggle()">
+                <button class="btn btn-secondary" onclick="resetRace()">
                     <span class="icon">🔄</span>
-                    Alternar
+                    Reiniciar Carrera
+                </button>
+                
+                <button class="btn btn-success" onclick="turnOnLED()">
+                    <span class="icon">🔴</span>
+                    Encender LED
+                </button>
+                <button class="btn btn-danger" onclick="turnOffLED()">
+                    <span class="icon">⚪</span>
+                    Apagar LED
                 </button>
             </div>
             
             <div class="info">
                 <h3>Información del Sistema</h3>
                 <p><strong>Dispositivo:</strong> Raspberry Pi Pico 2W</p>
-                <p><strong>Pin LED:</strong> GP0</p>
+                <p><strong>Display:</strong> MAX7219 (GP2, GP3, GP4)</p>
+                <p><strong>LED:</strong> GP0</p>
+                <p><strong>Sensor:</strong> TCRT5000 (GP16)</p>
                 <p><strong>IP:</strong> <span id="deviceIP">Cargando...</span></p>
                 <p><strong>Estado de conexión:</strong> <span id="connectionStatus">Conectando...</span></p>
             </div>

@@ -1,6 +1,6 @@
 """
-Controlador LED - Raspberry Pi Pico 2W
-Archivo principal que maneja la conexión WiFi, servidor web y control del LED
+Controlador de Carrera - Raspberry Pi Pico 2W
+Archivo principal que maneja la conexión WiFi, servidor web y control de carrera
 """
 
 import network
@@ -8,7 +8,7 @@ import socket
 import time
 from machine import Pin
 from web_server import WebServer
-from led_controller import LEDController
+from race_controller import RaceController
 from config import WIFI_SSID, WIFI_PASSWORD, SERVER_PORT, LED_PIN_RED, SENSOR_TCRT5000_PIN
 import utime
 
@@ -40,10 +40,10 @@ def connect_wifi():
 
 def main():
     """Función principal"""
-    print("Iniciando Controlador LED...")
+    print("Iniciando Controlador de Carrera...")
     
-    # Inicializar controlador LED
-    led_controller = LEDController(LED_PIN_RED)
+    # Inicializar controlador de carrera
+    race_controller = RaceController(max_laps=10)
     
     # Inicializar sensor TCRT5000
     sensor = Pin(SENSOR_TCRT5000_PIN, Pin.IN)
@@ -56,31 +56,25 @@ def main():
         ip_address = "192.168.1.100"  # IP por defecto
     
     # Inicializar servidor web
-    web_server = WebServer(ip_address, SERVER_PORT, led_controller)
+    web_server = WebServer(ip_address, SERVER_PORT, race_controller)
     
     print(f"Servidor web iniciado en http://{ip_address}:{SERVER_PORT}")
     print("Presiona Ctrl+C para detener")
     
     try:
         # Bucle principal del servidor
-        led_timer = 0
         while True:
             web_server.handle_requests()
             current_sensor_state = sensor.value()
             # Detectar flanco descendente (detección de objeto)
             if last_sensor_state == 1 and current_sensor_state == 0:
-                print("[TCRT5000] Detección de objeto - Encendiendo LED rojo por 5 segundos")
-                led_controller.turn_on()
-                led_timer = utime.ticks_ms()
-            # Apagar LED después de 5 segundos
-            if led_controller.is_on and led_timer and utime.ticks_diff(utime.ticks_ms(), led_timer) > 5000:
-                led_controller.turn_off()
-                led_timer = 0
+                print("[TCRT5000] Detección de objeto - Incrementando vuelta")
+                race_controller.increment_lap()
             last_sensor_state = current_sensor_state
             time.sleep(0.01)  # Pequeña pausa para no saturar el CPU
     except KeyboardInterrupt:
         print("\nDeteniendo servidor...")
-        led_controller.cleanup()
+        race_controller.cleanup()
 
 if __name__ == "__main__":
     main() 

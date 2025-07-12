@@ -1,20 +1,39 @@
-// JavaScript para el Controlador LED
+// JavaScript para el Controlador de Carrera
+let raceStatus = {
+    current_laps: 0,
+    max_laps: 10,
+    remaining_laps: 10,
+    is_completed: false,
+    progress_percentage: 0
+};
 let ledStatus = false;
 let connectionStatus = 'connecting';
 
 // Función para actualizar la interfaz
 function updateUI() {
-    const ledLight = document.getElementById('ledLight');
-    const statusText = document.getElementById('statusText');
+    const currentLapElement = document.getElementById('currentLap');
+    const maxLapsElement = document.getElementById('maxLaps');
+    const progressFillElement = document.getElementById('progressFill');
+    const raceStatusElement = document.getElementById('raceStatus');
     const connectionStatusElement = document.getElementById('connectionStatus');
     
-    // Actualizar LED
-    if (ledStatus) {
-        ledLight.classList.add('on');
-        statusText.textContent = 'Estado: Encendido';
+    // Actualizar contador de vueltas
+    currentLapElement.textContent = raceStatus.current_laps;
+    maxLapsElement.textContent = raceStatus.max_laps;
+    
+    // Actualizar barra de progreso
+    progressFillElement.style.width = `${raceStatus.progress_percentage}%`;
+    
+    // Actualizar estado de la carrera
+    if (raceStatus.is_completed) {
+        raceStatusElement.textContent = '¡Carrera completada!';
+        raceStatusElement.style.color = '#4CAF50';
+    } else if (raceStatus.current_laps === 0) {
+        raceStatusElement.textContent = 'Listo para comenzar';
+        raceStatusElement.style.color = '#666';
     } else {
-        ledLight.classList.remove('on');
-        statusText.textContent = 'Estado: Apagado';
+        raceStatusElement.textContent = `Vuelta ${raceStatus.current_laps} de ${raceStatus.max_laps}`;
+        raceStatusElement.style.color = '#333';
     }
     
     // Actualizar estado de conexión
@@ -62,40 +81,68 @@ async function apiCall(endpoint) {
     }
 }
 
-// Función para encender el LED
-async function turnOn() {
+// Función para incrementar vuelta
+async function incrementLap() {
     const button = event.target.closest('.btn');
     if (button) {
         button.disabled = true;
-        button.innerHTML = '<span class="icon">⏳</span>Encendiendo...';
+        button.innerHTML = '<span class="icon">⏳</span>Incrementando...';
     }
     
-    await apiCall('/api/led/on');
+    try {
+        const response = await fetch('/api/lap/increment');
+        const data = await response.json();
+        
+        if (data.success) {
+            raceStatus = data.race_status;
+            showNotification('Vuelta incrementada', 'success');
+        } else {
+            showNotification(data.message, 'warning');
+        }
+        
+        updateUI();
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error al incrementar vuelta', 'error');
+    }
     
     if (button) {
         button.disabled = false;
-        button.innerHTML = '<span class="icon">🔴</span>Encender';
+        button.innerHTML = '<span class="icon">🏁</span>Incrementar Vuelta';
     }
 }
 
-// Función para apagar el LED
-async function turnOff() {
+// Función para reiniciar carrera
+async function resetRace() {
     const button = event.target.closest('.btn');
     if (button) {
         button.disabled = true;
-        button.innerHTML = '<span class="icon">⏳</span>Apagando...';
+        button.innerHTML = '<span class="icon">⏳</span>Reiniciando...';
     }
     
-    await apiCall('/api/led/off');
+    try {
+        const response = await fetch('/api/lap/reset');
+        const data = await response.json();
+        
+        if (data.success) {
+            raceStatus = data.race_status;
+            showNotification('Carrera reiniciada', 'success');
+        }
+        
+        updateUI();
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error al reiniciar carrera', 'error');
+    }
     
     if (button) {
         button.disabled = false;
-        button.innerHTML = '<span class="icon">⚫</span>Apagar';
+        button.innerHTML = '<span class="icon">🔄</span>Reiniciar Carrera';
     }
 }
 
-// Función para alternar el LED
-async function toggle() {
+// Función para alternar LED
+async function toggleLED() {
     const button = event.target.closest('.btn');
     if (button) {
         button.disabled = true;
@@ -106,18 +153,47 @@ async function toggle() {
     
     if (button) {
         button.disabled = false;
-        button.innerHTML = '<span class="icon">🔄</span>Alternar';
+        button.innerHTML = '<span class="icon">🔴</span>Alternar LED';
+    }
+}
+
+// Función para encender el LED
+async function turnOnLED() {
+    const button = event.target.closest('.btn');
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<span class="icon">⏳</span>Encendiendo...';
+    }
+    await apiCall('/api/led/on');
+    if (button) {
+        button.disabled = false;
+        button.innerHTML = '<span class="icon">🔴</span>Encender LED';
+    }
+}
+
+// Función para apagar el LED
+async function turnOffLED() {
+    const button = event.target.closest('.btn');
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<span class="icon">⏳</span>Apagando...';
+    }
+    await apiCall('/api/led/off');
+    if (button) {
+        button.disabled = false;
+        button.innerHTML = '<span class="icon">⚪</span>Apagar LED';
     }
 }
 
 // Función para obtener el estado actual
 async function getStatus() {
     try {
-        const response = await fetch('/api/led/status');
+        const response = await fetch('/api/lap/status');
         const data = await response.json();
         
         if (data.success) {
-            ledStatus = data.is_on;
+            raceStatus = data.race_status;
+            ledStatus = data.race_status.led_status.is_on;
             connectionStatus = 'connected';
             updateUI();
         }

@@ -67,6 +67,11 @@ Raspberry Pi Pico 2W
    - `main.py`
    - `led_controller.py`
    - `web_server.py`
+   - `race_controller.py`
+   - `max7219_display.py`
+   - `number_display.py`
+   - `lap_counter.py`
+   - `config.py`
 
 ### 3. Configurar WiFi
 Edita el archivo `main.py` y cambia las credenciales WiFi:
