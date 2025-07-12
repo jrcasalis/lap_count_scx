@@ -7,6 +7,7 @@ import socket
 import json
 import gc
 import os
+from config import LED_PIN_RED
 
 class WebServer:
     def __init__(self, host, port, race_controller):
@@ -101,6 +102,12 @@ class WebServer:
             return self.api_led_toggle()
         elif path == "/api/led/status":
             return self.api_led_status()
+        elif path == "/api/animation/test":
+            return self.api_animation_test()
+        elif path == "/api/animation/set":
+            return self.api_animation_set()
+        elif path == "/api/animation/list":
+            return self.api_animation_list()
         elif path == "/style.css":
             return self.serve_css()
         elif path == "/script.js":
@@ -170,7 +177,7 @@ class WebServer:
     
     def api_led_on(self):
         """API: Encender LED"""
-        self.race_controller.led_controller.turn_on()
+        self.race_controller.turn_on_led()
         return self.json_response({
             "success": True,
             "is_on": True,
@@ -179,7 +186,7 @@ class WebServer:
         
     def api_led_off(self):
         """API: Apagar LED"""
-        self.race_controller.led_controller.turn_off()
+        self.race_controller.turn_off_led()
         return self.json_response({
             "success": True,
             "is_on": False,
@@ -188,21 +195,52 @@ class WebServer:
         
     def api_led_toggle(self):
         """API: Alternar LED"""
-        self.race_controller.led_controller.toggle()
-        status = self.race_controller.led_controller.get_status()
+        is_on = self.race_controller.toggle_led()
         return self.json_response({
             "success": True,
-            "is_on": status["is_on"],
+            "is_on": is_on,
             "message": "LED alternado"
         })
         
     def api_led_status(self):
         """API: Obtener estado del LED"""
-        status = self.race_controller.led_controller.get_status()
+        is_on = self.race_controller.led.value() == 1
         return self.json_response({
             "success": True,
-            "is_on": status["is_on"],
-            "pin": status["pin"]
+            "is_on": is_on,
+            "pin": LED_PIN_RED
+        })
+    
+    def api_animation_test(self):
+        """API: Probar animación específica"""
+        # Por ahora, usar animación por defecto
+        animation_type = "checkered_flag"
+        
+        success = self.race_controller.test_animation(animation_type)
+        return self.json_response({
+            "success": success,
+            "animation_type": animation_type,
+            "message": "Animación ejecutada" if success else "Animación no válida"
+        })
+    
+    def api_animation_set(self):
+        """API: Cambiar animación de finalización"""
+        # Por ahora, usar animación por defecto
+        animation_type = "checkered_flag"
+        
+        success = self.race_controller.set_completion_animation(animation_type)
+        return self.json_response({
+            "success": success,
+            "animation_type": animation_type,
+            "message": "Animación configurada" if success else "Animación no válida"
+        })
+    
+    def api_animation_list(self):
+        """API: Obtener lista de animaciones disponibles"""
+        animations = self.race_controller.get_available_animations()
+        return self.json_response({
+            "success": True,
+            "animations": animations
         })
         
     def json_response(self, data):

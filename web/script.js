@@ -1,8 +1,8 @@
 // JavaScript para el Controlador de Carrera
 let raceStatus = {
     current_laps: 0,
-    max_laps: 10,
-    remaining_laps: 10,
+    max_laps: 15,
+    remaining_laps: 15,
     is_completed: false,
     progress_percentage: 0
 };

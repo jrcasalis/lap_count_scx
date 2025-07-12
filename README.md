@@ -1,115 +1,103 @@
-# Controlador LED - Raspberry Pi Pico 2W
+# Controlador LED y Contador de Vueltas - Raspberry Pi Pico 2W
 
-Este proyecto permite controlar un LED conectado a la Raspberry Pi Pico 2W mediante una interfaz web moderna.
+Este proyecto permite controlar un LED y un contador de vueltas con display doble MAX7219 (8x16 LEDs) en la Raspberry Pi Pico 2W, todo mediante una interfaz web moderna.
 
 ## 🚀 Características
 
 - Control de LED mediante interfaz web
-- Display MAX7219 integrado que muestra "R" cuando el LED está encendido y "N" cuando está apagado
+- Contador de vueltas de carrera con animaciones
+- Display MAX7219 flexible (8x8 o 16x8 LEDs, doble módulo en cascada)
+- Animación de bandera a cuadros alternante (siempre visible)
+- Animaciones configurables desde la web
 - Servidor web integrado en MicroPython
 - Interfaz moderna y responsive
 - Documentación completa
 - Estructura de proyecto escalable
 
-## 📋 Requisitos
+## ✅ Driver y sistema configurables
 
-### Hardware
-- Raspberry Pi Pico 2W
-- LED rojo
-- Resistencia de 220Ω
-- Display MAX7219 (matriz de 8x8 LEDs)
-- Cables de conexión
+### **Nuevas características implementadas:**
 
-### Conexiones
-- LED positivo → GP0 (con resistencia de 220Ω)
-- LED negativo → GND
-- Display MAX7219:
-  - DIN → GP2
-  - CS → GP3
-  - CLK → GP4
-  - VCC → 3.3V
-  - GND → GND
+#### **🔧 Parámetros configurables:**
+- **`brightness`** (0-15): Control de brillo
+- **`rotation`** (0°, 90°, 180°, 270°): Rotación del texto
+- **`orientation`** ('horizontal'/'vertical'): Orientación del display
 
-## 📁 Estructura del Proyecto
+#### **🔄 Funciones de configuración:**
+- **`set_brightness(brightness)`** - Cambiar brillo en tiempo real
+- **`set_rotation(rotation)`** - Cambiar rotación
+- **`set_orientation(orientation)`** - Cambiar orientación
 
-```
-lap_count_scx/
-├── README.md                 # Documentación principal
-├── requirements.txt          # Dependencias de Python
-├── src/
-│   ├── main.py              # Código principal de MicroPython
-│   ├── web_server.py        # Servidor web
-│   ├── led_controller.py    # Controlador del LED
-│   ├── max7219_display.py   # Controlador del display MAX7219
-│   └── config.py            # Configuración centralizada
-├── web/
-│   ├── index.html           # Página principal
-│   ├── style.css            # Estilos CSS
-│   └── script.js            # JavaScript del frontend
-├── docs/
-│   ├── setup.md             # Guía de configuración
-│   └── api.md               # Documentación de la API
-└── examples/
-    ├── basic_led.py         # Ejemplo básico de control LED
-    ├── test_max7219_display.py  # Ejemplo de prueba del display MAX7219
-    └── test_max7219_simple.py   # Test simple del display (recomendado)
-```
+#### **📱 Funciones de visualización:**
+- **`show_two_digits(value)`** - Muestra números con configuración aplicada
+- **`show_text(text)`** - Muestra texto (números)
+- **Animaciones de bandera a cuadros, giratoria, pulsante, ondulante y alternante**
 
-## 🛠️ Instalación
+### **📁 Archivos principales:**
+
+- `src/max7219_dual_display_configurable.py` - Driver principal configurable
+- `src/race_controller.py` - Lógica de carrera y animaciones
+- `src/web_server.py` - Servidor web y API
+- `src/main.py` - Arranque principal
+- `src/config.py` - Configuración centralizada
+- `examples/` - Ejemplos de uso y pruebas
+- `web/` - Interfaz web (HTML, CSS, JS)
+
+### **🧪 Ejemplos disponibles:**
+
+- `examples/test_checkered_flag_alternating.py` - Prueba de animación de bandera a cuadros alternante
+- `examples/test_checkered_flag_blink.py` - Prueba de bandera a cuadros (alternancia)
+- `examples/test_animations.py` - Prueba de todas las animaciones disponibles
+- `examples/test_web_integration.py` - Prueba de integración web
+- `examples/test_complete_system.py` - Prueba del sistema completo
+
+## 📋 API HTTP REST
+
+### Endpoints principales:
+
+#### LED
+- `GET /api/led/on` - Enciende el LED
+- `GET /api/led/off` - Apaga el LED
+- `GET /api/led/toggle` - Alterna el LED
+- `GET /api/led/status` - Estado del LED
+
+#### Contador de vueltas
+- `GET /api/lap/increment` - Incrementa el contador de vueltas
+- `GET /api/lap/reset` - Reinicia la carrera
+- `GET /api/lap/status` - Estado actual de la carrera (vueltas, progreso, completado)
+
+#### Animaciones
+- `GET /api/animation/test` - Prueba la animación de bandera a cuadros
+- `GET /api/animation/set` - Cambia la animación de finalización
+- `GET /api/animation/list` - Lista las animaciones disponibles
+
+#### Web
+- `/` - Interfaz web principal
+- `/style.css` - Estilos CSS
+- `/script.js` - JavaScript del frontend
+
+## 🛠️ Instalación y uso
 
 1. **Clonar el repositorio**
    ```bash
    git clone <tu-repositorio>
    cd lap_count_scx
    ```
-
-2. **Conectar el hardware**
-   - Conectar LED positivo a GP0 (con resistencia de 220Ω)
-   - Conectar LED negativo a GND
-   - Conectar display MAX7219:
-     - DIN → GP2
-     - CS → GP3
-     - CLK → GP4
-     - VCC → 3.3V
-     - GND → GND
-
-3. **Subir código a la Pico**
-   ```bash
-   # Usar Thonny IDE o rshell para subir archivos
-   # Copiar src/main.py a la Pico
-   ```
-
+2. **Conectar el hardware** (ver docs y esquemas)
+3. **Subir código a la Pico** (ver guía en docs/setup.md)
 4. **Ejecutar**
-   - Conectar la Pico al ordenador
-   - Ejecutar `main.py` en la Pico usando Thonny IDE
-   - Acceder a la interfaz web en `http://<ip-pico>:8080`
-
-   **Para probar el display MAX7219:**
-   ```python
-   # En Thonny IDE, ejecutar:
-   exec(open('test_max7219_simple.py').read())
-   ```
-
-## 🌐 Uso
-
-1. Conecta la Raspberry Pi Pico 2W a tu red WiFi
-2. Ejecuta el código principal
-3. Accede a la interfaz web desde cualquier dispositivo en la red
-4. Usa los botones para controlar el LED
-
-## 🔧 Configuración WiFi
-
-Edita las credenciales WiFi en `src/main.py`:
-
-```python
-WIFI_SSID = "tu-red-wifi"
-WIFI_PASSWORD = "tu-contraseña"
-```
+   - Ejecuta `main.py` en la Pico usando Thonny IDE
+   - Accede a la interfaz web en `http://<ip-pico>:8080`
 
 ## 📚 Documentación
 
 - [Guía de Configuración](docs/setup.md)
 - [Documentación de la API](docs/api.md)
+- [Configuración de Módulos MAX7219 en Cascada](docs/max7219_cascade_setup.md)
+- [Configuración Flexible del Display](docs/flexible_display_config.md)
+- [Configuración de Rotación del Display](docs/display_rotation_config.md)
+- [Scroll de Texto](docs/scroll_explanation.md)
+- [Generación de Letras](docs/letter_generation_explanation.md)
 
 ## 🤝 Contribuir
 

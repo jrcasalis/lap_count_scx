@@ -10,23 +10,27 @@ import sys
 def copy_files_to_pico():
     """Copia los archivos necesarios a la Pico"""
     
-    # Lista de archivos a copiar
+    # Lista de archivos a copiar (actualizada)
     files_to_copy = [
         ('src/main.py', 'main.py'),
         ('src/web_server.py', 'web_server.py'),
         ('src/led_controller.py', 'led_controller.py'),
-        ('src/max7219_display.py', 'max7219_display.py'),
-        ('src/lap_counter.py', 'lap_counter.py'),
-        ('src/number_display.py', 'number_display.py'),
+        ('src/max7219_dual_display_configurable.py', 'max7219_dual_display_configurable.py'),
         ('src/race_controller.py', 'race_controller.py'),
+        ('src/lap_counter.py', 'lap_counter.py'),
         ('src/config.py', 'config.py'),
         ('web/index.html', 'index.html'),
         ('web/style.css', 'style.css'),
         ('web/script.js', 'script.js'),
-        ('examples/test_max7219_simple.py', 'test_max7219_simple.py'),
-        ('examples/test_max7219_alternative.py', 'test_max7219_alternative.py'),
-        ('examples/test_scroll_text.py', 'test_scroll_text.py'),
-        ('examples/test_lap_counter.py', 'test_lap_counter.py')
+        # Ejemplos relevantes
+        ('examples/test_checkered_flag_alternating.py', 'test_checkered_flag_alternating.py'),
+        ('examples/test_checkered_flag_blink.py', 'test_checkered_flag_blink.py'),
+        ('examples/test_animations.py', 'test_animations.py'),
+        ('examples/test_complete_system.py', 'test_complete_system.py'),
+        ('examples/test_web_integration.py', 'test_web_integration.py'),
+        ('examples/test_simple_configurable.py', 'test_simple_configurable.py'),
+        ('examples/test_rotation_examples.py', 'test_rotation_examples.py'),
+        ('examples/test_configurable_display.py', 'test_configurable_display.py'),
     ]
     
     print("Copiando archivos a la Raspberry Pi Pico...")
@@ -45,14 +49,14 @@ def copy_files_to_pico():
     print("\nPara probar el sistema de contador de vueltas:")
     print("1. Conecta la Pico al ordenador")
     print("2. Abre Thonny IDE")
-    print("3. Para probar el contador completo:")
-    print("   exec(open('test_lap_counter.py').read())")
-    print("4. Para probar scroll de texto:")
-    print("   exec(open('test_scroll_text.py').read())")
-    print("5. Si el display falla, prueba:")
-    print("   exec(open('test_max7219_alternative.py').read())")
-    print("6. O el test simple:")
-    print("   exec(open('test_max7219_simple.py').read())")
+    print("3. Para probar el sistema completo:")
+    print("   exec(open('test_complete_system.py').read())")
+    print("4. Para probar la animación de bandera a cuadros alternante:")
+    print("   exec(open('test_checkered_flag_alternating.py').read())")
+    print("5. Para probar todas las animaciones:")
+    print("   exec(open('test_animations.py').read())")
+    print("6. Para probar la integración web:")
+    print("   exec(open('test_web_integration.py').read())")
     print("\nPara ejecutar el proyecto completo:")
     print("1. Ejecuta: exec(open('main.py').read())")
 

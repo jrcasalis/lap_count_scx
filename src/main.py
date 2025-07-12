@@ -9,8 +9,7 @@ import time
 from machine import Pin
 from web_server import WebServer
 from race_controller import RaceController
-from config import WIFI_SSID, WIFI_PASSWORD, SERVER_PORT, LED_PIN_RED, SENSOR_TCRT5000_PIN
-import utime
+from config import *
 
 def connect_wifi():
     """Conecta a la red WiFi"""
@@ -43,7 +42,7 @@ def main():
     print("Iniciando Controlador de Carrera...")
     
     # Inicializar controlador de carrera
-    race_controller = RaceController(max_laps=10)
+    race_controller = RaceController(max_laps=RACE_MAX_LAPS)
     
     # Inicializar sensor TCRT5000
     sensor = Pin(SENSOR_TCRT5000_PIN, Pin.IN)

@@ -1,6 +1,6 @@
-# Documentación de la API - Controlador LED
+# Documentación de la API - Controlador LED y Contador de Vueltas
 
-Esta documentación describe los endpoints de la API REST para controlar el LED desde la Raspberry Pi Pico 2W.
+Esta documentación describe los endpoints de la API REST para controlar el LED, el contador de vueltas y las animaciones desde la Raspberry Pi Pico 2W.
 
 ## 🌐 Información General
 
@@ -14,23 +14,18 @@ Esta documentación describe los endpoints de la API REST para controlar el LED 
 ### 1. Página Principal
 **GET** `/`
 
-Sirve la interfaz web principal para controlar el LED.
+Sirve la interfaz web principal para controlar el sistema.
 
-**Respuesta:**
-- **Content-Type**: `text/html`
-- **Descripción**: Página HTML con la interfaz de usuario
+---
 
-**Ejemplo:**
-```bash
-curl http://192.168.1.100:8080/
-```
+### 2. Control de LED
 
-### 2. Encender LED
-**GET** `/api/led/on`
+- **GET** `/api/led/on` - Enciende el LED
+- **GET** `/api/led/off` - Apaga el LED
+- **GET** `/api/led/toggle` - Alterna el estado del LED
+- **GET** `/api/led/status` - Obtiene el estado actual del LED
 
-Enciende el LED conectado al pin GP0.
-
-**Respuesta:**
+**Ejemplo de respuesta:**
 ```json
 {
     "success": true,
@@ -39,85 +34,59 @@ Enciende el LED conectado al pin GP0.
 }
 ```
 
-**Ejemplo:**
-```bash
-curl http://192.168.1.100:8080/api/led/on
-```
+---
 
-### 3. Apagar LED
-**GET** `/api/led/off`
+### 3. Contador de Vueltas
 
-Apaga el LED conectado al pin GP0.
+- **GET** `/api/lap/increment` - Incrementa el contador de vueltas
+- **GET** `/api/lap/reset` - Reinicia la carrera
+- **GET** `/api/lap/status` - Obtiene el estado actual de la carrera
 
-**Respuesta:**
+**Ejemplo de respuesta para `/api/lap/status`:**
 ```json
 {
     "success": true,
-    "is_on": false,
-    "message": "LED apagado"
+    "race_status": {
+        "current_laps": 7,
+        "max_laps": 15,
+        "remaining_laps": 8,
+        "is_completed": false,
+        "progress_percentage": 46.7,
+        "led_status": { "is_on": false }
+    }
 }
 ```
 
-**Ejemplo:**
-```bash
-curl http://192.168.1.100:8080/api/led/off
-```
+---
 
-### 4. Alternar LED
-**GET** `/api/led/toggle`
+### 4. Animaciones
 
-Cambia el estado del LED (si está encendido lo apaga, si está apagado lo enciende).
+- **GET** `/api/animation/test` - Prueba la animación de bandera a cuadros (o la animación configurada)
+- **GET** `/api/animation/set` - Cambia la animación de finalización (por ahora, fija a bandera a cuadros)
+- **GET** `/api/animation/list` - Lista las animaciones disponibles
 
-**Respuesta:**
+**Ejemplo de respuesta para `/api/animation/list`:**
 ```json
 {
     "success": true,
-    "is_on": true,
-    "message": "LED alternado"
+    "animations": {
+        "checkered_flag": "Bandera a cuadros clásica",
+        "spinning_flag": "Bandera giratoria",
+        "pulse_flag": "Bandera pulsante",
+        "wave_flag": "Bandera ondulante",
+        "none": "Sin animación"
+    }
 }
 ```
 
-**Ejemplo:**
-```bash
-curl http://192.168.1.100:8080/api/led/toggle
-```
+---
 
-### 5. Estado del LED
-**GET** `/api/led/status`
+### 5. Archivos Web
 
-Obtiene el estado actual del LED.
+- **GET** `/style.css` - Sirve los estilos CSS
+- **GET** `/script.js` - Sirve el JavaScript del frontend
 
-**Respuesta:**
-```json
-{
-    "success": true,
-    "is_on": false,
-    "pin": 0
-}
-```
-
-**Ejemplo:**
-```bash
-curl http://192.168.1.100:8080/api/led/status
-```
-
-### 6. Estilos CSS
-**GET** `/style.css`
-
-Sirve los estilos CSS para la interfaz web.
-
-**Respuesta:**
-- **Content-Type**: `text/css`
-- **Descripción**: Archivo CSS con estilos modernos
-
-### 7. JavaScript
-**GET** `/script.js`
-
-Sirve el código JavaScript del frontend.
-
-**Respuesta:**
-- **Content-Type**: `application/javascript`
-- **Descripción**: Archivo JavaScript para la funcionalidad del frontend
+---
 
 ## 📊 Códigos de Estado HTTP
 
@@ -127,9 +96,10 @@ Sirve el código JavaScript del frontend.
 | 400 | Bad Request - Petición malformada |
 | 404 | Not Found - Endpoint no encontrado |
 
+---
+
 ## 🔧 Uso con JavaScript
 
-### Función para hacer peticiones
 ```javascript
 async function apiCall(endpoint) {
     try {
@@ -146,95 +116,42 @@ async function apiCall(endpoint) {
         console.error('Error de conexión:', error);
     }
 }
-```
 
-### Ejemplos de uso
-```javascript
-// Encender LED
-await apiCall('/api/led/on');
-
-// Apagar LED
-await apiCall('/api/led/off');
-
-// Alternar LED
-await apiCall('/api/led/toggle');
-
-// Obtener estado
-const status = await apiCall('/api/led/status');
-console.log('LED encendido:', status.is_on);
+// Incrementar vuelta
+await apiCall('/api/lap/increment');
+// Reiniciar carrera
+await apiCall('/api/lap/reset');
+// Obtener estado de la carrera
+const status = await apiCall('/api/lap/status');
+console.log('Vueltas:', status.race_status.current_laps);
 ```
 
 ## 🌐 Uso con cURL
 
-### Encender LED
 ```bash
-curl -X GET http://192.168.1.100:8080/api/led/on
-```
-
-### Apagar LED
-```bash
-curl -X GET http://192.168.1.100:8080/api/led/off
-```
-
-### Alternar LED
-```bash
-curl -X GET http://192.168.1.100:8080/api/led/toggle
-```
-
-### Obtener estado
-```bash
-curl -X GET http://192.168.1.100:8080/api/led/status
+curl -X GET http://192.168.1.100:8080/api/lap/increment
+curl -X GET http://192.168.1.100:8080/api/lap/status
+curl -X GET http://192.168.1.100:8080/api/animation/list
 ```
 
 ## 🔄 Uso con Python
 
-### Ejemplo con requests
 ```python
 import requests
-
-# Configurar la URL base
 base_url = "http://192.168.1.100:8080"
-
-# Encender LED
-response = requests.get(f"{base_url}/api/led/on")
-print(response.json())
-
-# Apagar LED
-response = requests.get(f"{base_url}/api/led/off")
-print(response.json())
-
+# Incrementar vuelta
+requests.get(f"{base_url}/api/lap/increment")
 # Obtener estado
-response = requests.get(f"{base_url}/api/led/status")
-status = response.json()
-print(f"LED encendido: {status['is_on']}")
+status = requests.get(f"{base_url}/api/lap/status").json()
+print(status)
 ```
 
-## 🔒 Consideraciones de Seguridad
-
-- La API no implementa autenticación
-- Solo funciona en la red local
-- No expone información sensible
-- Recomendado para uso doméstico/educativo
-
 ## 🚀 Limitaciones
-
-- Solo un LED por instancia
-- Pin fijo (GP0)
+- Sin autenticación (solo red local)
+- Un solo LED y un solo contador de vueltas por instancia
 - Sin persistencia de estado
-- Memoria limitada de MicroPython
 
 ## 📝 Notas de Implementación
-
 - Todas las respuestas incluyen el campo `success`
 - Los errores se manejan con códigos HTTP apropiados
-- La API es stateless (no mantiene estado entre peticiones)
-- Compatible con CORS para desarrollo web
-
-## 🔧 Personalización
-
-Para modificar la API:
-
-1. **Cambiar pin del LED**: Edita `LED_PIN` en `main.py`
-2. **Agregar nuevos endpoints**: Modifica `process_request()` en `web_server.py`
-3. **Cambiar formato de respuesta**: Modifica `json_response()` en `web_server.py`
-4. **Agregar autenticación**: Implementa verificación en `process_request()` 
+- La API es stateless (no mantiene estado entre peticiones) 

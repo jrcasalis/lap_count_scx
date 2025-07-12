@@ -19,8 +19,12 @@ class LEDController:
         self.pin = Pin(pin_number, Pin.OUT)
         self.is_on = False
         
-        # Inicializar display MAX7219
-        self.display = MAX7219Display(MAX7219_DIN_PIN, MAX7219_CS_PIN, MAX7219_CLK_PIN)
+        # Inicializar display MAX7219 (flexible según configuración)
+        from config import MAX7219_DISPLAY_TYPE, MAX7219_NUM_MODULES
+        if MAX7219_DISPLAY_TYPE == "cascade":
+            self.display = MAX7219Display(MAX7219_DIN_PIN, MAX7219_CS_PIN, MAX7219_CLK_PIN, MAX7219_NUM_MODULES)
+        else:
+            self.display = MAX7219Display(MAX7219_DIN_PIN, MAX7219_CS_PIN, MAX7219_CLK_PIN)
         
         self.turn_off()  # Inicializar apagado
         
