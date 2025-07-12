@@ -287,12 +287,107 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// Función para obtener nombre del piloto
+async function getRacerName() {
+    try {
+        const response = await fetch('/api/racer/name');
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('currentRacerName').textContent = data.racer_name;
+            document.getElementById('racerName').value = data.racer_name;
+        }
+    } catch (error) {
+        console.error('Error obteniendo nombre del piloto:', error);
+    }
+}
+
+// Función para establecer nombre del piloto
+async function setRacerName() {
+    const racerName = document.getElementById('racerName').value.trim().toUpperCase();
+    
+    if (!racerName) {
+        showNotification('Por favor ingresa un nombre', 'warning');
+        return;
+    }
+    
+    const button = event.target.closest('.btn');
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<span class="icon">⏳</span>Guardando...';
+    }
+    
+    try {
+        // Llamar a la API para cambiar el nombre del piloto
+        const response = await fetch(`/api/racer/name/set?name=${encodeURIComponent(racerName)}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('currentRacerName').textContent = data.racer_name;
+            document.getElementById('racerName').value = racerName; // Mantener mayúsculas en el campo
+            showNotification('Nombre del piloto actualizado y mostrado en display', 'success');
+        } else {
+            showNotification(data.message || 'Error al actualizar nombre', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error al actualizar nombre', 'error');
+    }
+    
+    if (button) {
+        button.disabled = false;
+        button.innerHTML = '<span class="icon">💾</span>Guardar Nombre';
+    }
+}
+
+// Función para mostrar nombre del piloto en display
+async function displayRacerName() {
+    const button = event.target.closest('.btn');
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<span class="icon">⏳</span>Mostrando...';
+    }
+    
+    try {
+        const response = await fetch('/api/racer/display');
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Nombre mostrado en display', 'success');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error al mostrar nombre', 'error');
+    }
+    
+    if (button) {
+        button.disabled = false;
+        button.innerHTML = '<span class="icon">📺</span>Mostrar en Display';
+    }
+}
+
+// Función para convertir a mayúsculas mientras se escribe
+function convertToUpperCase(input) {
+    input.value = input.value.toUpperCase();
+}
+
 // Inicializar la página
 document.addEventListener('DOMContentLoaded', function() {
     updateDeviceIP();
     
     // Obtener estado inicial
     getStatus();
+    
+    // Obtener nombre del piloto
+    getRacerName();
+    
+    // Configurar conversión automática a mayúsculas
+    const racerNameInput = document.getElementById('racerName');
+    if (racerNameInput) {
+        racerNameInput.addEventListener('input', function() {
+            convertToUpperCase(this);
+        });
+    }
     
     // Verificar conectividad cada 10 segundos
     setInterval(checkConnectivity, 10000);

@@ -40,6 +40,7 @@ Este proyecto permite controlar un LED y un contador de vueltas con display dobl
 - `src/web_server.py` - Servidor web y API
 - `src/main.py` - Arranque principal
 - `src/config.py` - Configuración centralizada
+- `patterns/` - Patrones centralizados (dígitos, letras, varios, animaciones)
 - `examples/` - Ejemplos de uso y pruebas
 - `web/` - Interfaz web (HTML, CSS, JS)
 
@@ -49,7 +50,18 @@ Este proyecto permite controlar un LED y un contador de vueltas con display dobl
 - `examples/test_checkered_flag_blink.py` - Prueba de bandera a cuadros (alternancia)
 - `examples/test_animations.py` - Prueba de todas las animaciones disponibles
 - `examples/test_web_integration.py` - Prueba de integración web
+- `examples/test_web_integration_fixed.py` - Prueba de integración web con patrones centralizados
 - `examples/test_complete_system.py` - Prueba del sistema completo
+- `examples/test_racer_name_fixed.py` - Prueba del nombre del piloto con casco
+- `examples/test_helmet_display.py` - Prueba del display con casco
+- `examples/test_patterns_centralized.py` - Prueba de patrones centralizados
+- `examples/test_various_patterns.py` - Prueba de todos los patrones varios
+- `examples/test_letters.py` - Prueba de todas las letras A-Z
+- `examples/test_racer_name_scroll.py` - Prueba el scroll del nombre del piloto después de guardarlo
+- `examples/test_web_racer_name_fixed.py` - Prueba el nombre del piloto desde la interfaz web
+- `examples/test_racer_name_web_fixed.py` - Prueba el nombre del piloto desde la web (versión corregida)
+- `examples/test_helmet_scroll_fixed.py` - Prueba el scroll con casco real y velocidad configurable
+- `examples/test_long_names_scroll.py` - Prueba nombres largos con scroll mejorado
 
 ## 📋 API HTTP REST
 
@@ -70,6 +82,10 @@ Este proyecto permite controlar un LED y un contador de vueltas con display dobl
 - `GET /api/animation/test` - Prueba la animación de bandera a cuadros
 - `GET /api/animation/set` - Cambia la animación de finalización
 - `GET /api/animation/list` - Lista las animaciones disponibles
+
+#### Nombre del piloto
+- `GET /api/racer/name` - Obtiene el nombre del piloto
+- `GET /api/racer/display` - Muestra el nombre del piloto en el display
 
 #### Web
 - `/` - Interfaz web principal

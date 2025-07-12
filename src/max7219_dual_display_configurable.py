@@ -1,5 +1,7 @@
 import time
 from machine import Pin, SPI
+from patterns.digits import DIGITS, get_two_digits_pattern
+from patterns.various import HELMET
 
 class MAX7219DualDisplayConfigurable:
     def __init__(self, din_pin=3, cs_pin=5, clk_pin=2, num_modules=2, 
@@ -115,19 +117,24 @@ class MAX7219DualDisplayConfigurable:
             return rotated
         return pattern
 
-    # Tabla de patrones para los dígitos 0-9 (8x8)
-    DIGITS = {
-        '0': [0b00111100,0b01100110,0b11000011,0b11000011,0b11000011,0b11000011,0b01100110,0b00111100],
-        '1': [0b00011000,0b00111000,0b00011000,0b00011000,0b00011000,0b00011000,0b00011000,0b01111110],
-        '2': [0b00111100,0b01100110,0b00000110,0b00001100,0b00011000,0b00110000,0b01100000,0b01111110],
-        '3': [0b00111100,0b01100110,0b00000110,0b00011100,0b00000110,0b00000110,0b01100110,0b00111100],
-        '4': [0b00001100,0b00011100,0b00111100,0b01101100,0b01111110,0b00001100,0b00001100,0b00001100],
-        '5': [0b01111110,0b01100000,0b01100000,0b01111100,0b00000110,0b00000110,0b01100110,0b00111100],
-        '6': [0b00111100,0b01100110,0b01100000,0b01111100,0b01100110,0b01100110,0b01100110,0b00111100],
-        '7': [0b01111110,0b00000110,0b00001100,0b00011000,0b00110000,0b00110000,0b00110000,0b00110000],
-        '8': [0b00111100,0b01100110,0b01100110,0b00111100,0b01100110,0b01100110,0b01100110,0b00111100],
-        '9': [0b00111100,0b01100110,0b01100110,0b00111110,0b00000110,0b00000110,0b01100110,0b00111100],
-    }
+    # Los patrones ahora se importan desde patterns/
+    # DIGITS y HELMET están disponibles desde los imports
+
+    def show_helmet_and_digit(self, digit):
+        """Muestra el casco en el primer módulo y el dígito en el segundo"""
+        # Obtener patrón del dígito
+        s = str(digit)
+        if len(s) == 1:
+            s = "0" + s
+        right_pattern = DIGITS.get(s[-1], [0]*8)  # Solo el último dígito
+        helmet_pattern = HELMET
+        # Aplicar rotación
+        helmet_pattern = self.rotate_pattern(helmet_pattern, self.rotation)
+        right_pattern = self.rotate_pattern(right_pattern, self.rotation)
+        # Mostrar casco en el primer módulo, dígito en el segundo
+        for row in range(8):
+            self.write_register_module(0, row+1, helmet_pattern[row])
+            self.write_register_module(1, row+1, right_pattern[row])
 
     def show_two_digits(self, value):
         """Muestra un número de dos dígitos (00-99) con rotación y orientación configuradas"""
@@ -135,8 +142,8 @@ class MAX7219DualDisplayConfigurable:
         if len(s) == 1:
             s = "0" + s
         
-        left_pattern = self.DIGITS.get(s[0], [0]*8)
-        right_pattern = self.DIGITS.get(s[1], [0]*8)
+        left_pattern = DIGITS.get(s[0], [0]*8)
+        right_pattern = DIGITS.get(s[1], [0]*8)
         
         # Aplicar rotación
         left_pattern = self.rotate_pattern(left_pattern, self.rotation)
@@ -182,6 +189,199 @@ class MAX7219DualDisplayConfigurable:
         if self.orientation not in ['horizontal', 'vertical']:
             self.orientation = 'horizontal'
 
+    def scroll_text(self, text, scroll_speed=0.3, repeat=True):
+        """
+        Hace scroll de texto en el display
+        
+        Args:
+            text: Texto a mostrar (máximo 8 caracteres para display 8x16)
+            scroll_speed: Velocidad del scroll en segundos
+            repeat: Si debe repetir el scroll
+        """
+        from patterns.letters import get_letter_pattern
+        
+        # Convertir texto a mayúsculas y limitar longitud
+        text = text.upper()[:8]
+        
+        # Crear secuencia de patrones para el texto
+        text_patterns = []
+        for letter in text:
+            pattern = get_letter_pattern(letter)
+            text_patterns.append(pattern)
+        
+        # Agregar espacios al inicio y final para mejor efecto
+        empty_pattern = [0] * 8
+        display_patterns = [empty_pattern] + text_patterns + [empty_pattern]
+        
+        # Calcular cuántos pasos necesitamos para mostrar todo el texto
+        total_steps = len(display_patterns) * 8  # 8 columnas por letra
+        
+        step = 0
+        while True:
+            # Calcular qué patrones mostrar en cada paso
+            start_col = step % 8
+            pattern_index = step // 8
+            
+            if pattern_index >= len(display_patterns):
+                if not repeat:
+                    break
+                step = 0
+                continue
+            
+            # Obtener patrones actuales (máximo 2 letras visibles a la vez)
+            current_patterns = display_patterns[pattern_index:pattern_index + 2]
+            
+            # Mostrar patrones en el display
+            if len(current_patterns) >= 1:
+                left_pattern = current_patterns[0]
+                left_pattern = self.rotate_pattern(left_pattern, self.rotation)
+                
+                for row in range(8):
+                    self.write_register_module(0, row+1, left_pattern[row])
+            
+            if len(current_patterns) >= 2:
+                right_pattern = current_patterns[1]
+                right_pattern = self.rotate_pattern(right_pattern, self.rotation)
+                
+                for row in range(8):
+                    self.write_register_module(1, row+1, right_pattern[row])
+            else:
+                # Limpiar segundo módulo si no hay segunda letra
+                for row in range(8):
+                    self.write_register_module(1, row+1, 0)
+            
+            step += 1
+            time.sleep(scroll_speed)
+    
+    def scroll_text_with_helmet(self, text, scroll_speed=0.2, repeat=False):
+        """
+        Hace scroll de texto con patrón de casco al inicio - Versión mejorada
+        
+        Args:
+            text: Texto a mostrar (sin límite de caracteres)
+            scroll_speed: Velocidad del scroll en segundos
+            repeat: Si debe repetir el scroll
+        """
+        from patterns.letters import get_letter_pattern
+        
+        # Convertir texto a mayúsculas
+        text = text.upper()
+        
+        # Crear secuencia de patrones: [espacio, casco, espacio, texto completo, espacio]
+        empty_pattern = [0] * 8
+        helmet_pattern = HELMET  # Usar el patrón real del casco
+        
+        # Crear patrones para todo el texto (sin límite)
+        text_patterns = []
+        for letter in text:
+            pattern = get_letter_pattern(letter)
+            text_patterns.append(pattern)
+        
+        # Secuencia completa: espacio + casco + espacio + texto completo + espacio
+        display_patterns = [empty_pattern, helmet_pattern, empty_pattern] + text_patterns + [empty_pattern]
+        
+        # Calcular pasos totales para mostrar todo el contenido
+        total_steps = len(display_patterns) * 8  # 8 columnas por patrón
+        
+        step = 0
+        while True:
+            # Calcular qué patrones mostrar en cada paso
+            pattern_index = step // 8
+            
+            if pattern_index >= len(display_patterns):
+                if not repeat:
+                    break
+                step = 0
+                continue
+            
+            # Obtener patrones actuales (máximo 2 patrones visibles a la vez)
+            current_patterns = display_patterns[pattern_index:pattern_index + 2]
+            
+            # Mostrar patrones en el display
+            if len(current_patterns) >= 1:
+                left_pattern = current_patterns[0]
+                left_pattern = self.rotate_pattern(left_pattern, self.rotation)
+                
+                for row in range(8):
+                    self.write_register_module(0, row+1, left_pattern[row])
+            
+            if len(current_patterns) >= 2:
+                right_pattern = current_patterns[1]
+                right_pattern = self.rotate_pattern(right_pattern, self.rotation)
+                
+                for row in range(8):
+                    self.write_register_module(1, row+1, right_pattern[row])
+            else:
+                # Limpiar segundo módulo si no hay segundo patrón
+                for row in range(8):
+                    self.write_register_module(1, row+1, 0)
+            
+            step += 1
+            time.sleep(scroll_speed)
+    
+    def scroll_text_smooth(self, text, scroll_speed=0.15, repeat=False):
+        """
+        Scroll suave de texto que simula movimiento real
+        
+        Args:
+            text: Texto a mostrar (sin límite de caracteres)
+            scroll_speed: Velocidad del scroll en segundos
+            repeat: Si debe repetir el scroll
+        """
+        from patterns.letters import get_letter_pattern
+        
+        # Convertir texto a mayúsculas
+        text = text.upper()
+        
+        # Crear patrones para todo el texto
+        text_patterns = []
+        for letter in text:
+            pattern = get_letter_pattern(letter)
+            text_patterns.append(pattern)
+        
+        # Agregar espacios al inicio y final para mejor efecto
+        empty_pattern = [0] * 8
+        display_patterns = [empty_pattern] + text_patterns + [empty_pattern]
+        
+        # Calcular pasos totales
+        total_steps = len(display_patterns) * 8
+        
+        step = 0
+        while True:
+            # Calcular qué patrones mostrar en cada paso
+            pattern_index = step // 8
+            
+            if pattern_index >= len(display_patterns):
+                if not repeat:
+                    break
+                step = 0
+                continue
+            
+            # Obtener patrones actuales (máximo 2 patrones visibles a la vez)
+            current_patterns = display_patterns[pattern_index:pattern_index + 2]
+            
+            # Mostrar patrones en el display
+            if len(current_patterns) >= 1:
+                left_pattern = current_patterns[0]
+                left_pattern = self.rotate_pattern(left_pattern, self.rotation)
+                
+                for row in range(8):
+                    self.write_register_module(0, row+1, left_pattern[row])
+            
+            if len(current_patterns) >= 2:
+                right_pattern = current_patterns[1]
+                right_pattern = self.rotate_pattern(right_pattern, self.rotation)
+                
+                for row in range(8):
+                    self.write_register_module(1, row+1, right_pattern[row])
+            else:
+                # Limpiar segundo módulo si no hay segundo patrón
+                for row in range(8):
+                    self.write_register_module(1, row+1, 0)
+            
+            step += 1
+            time.sleep(scroll_speed)
+    
     def test_pattern(self, pattern_type='all_on'):
         """Muestra patrones de prueba"""
         if pattern_type == 'all_on':

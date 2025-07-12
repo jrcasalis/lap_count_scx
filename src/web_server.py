@@ -108,6 +108,14 @@ class WebServer:
             return self.api_animation_set()
         elif path == "/api/animation/list":
             return self.api_animation_list()
+        elif path == "/api/racer/name":
+            return self.api_racer_name()
+        elif path.startswith("/api/racer/name/set"):
+            return self.api_racer_name_set(request)
+        elif path == "/api/racer/display":
+            return self.api_racer_display()
+        elif path.startswith("/api/racer/scroll/speed"):
+            return self.api_racer_scroll_speed(request)
         elif path == "/style.css":
             return self.serve_css()
         elif path == "/script.js":
@@ -241,6 +249,74 @@ class WebServer:
         return self.json_response({
             "success": True,
             "animations": animations
+        })
+    
+    def api_racer_name(self):
+        """API: Obtener o cambiar nombre del piloto"""
+        # Por ahora solo retorna el nombre actual
+        # En el futuro se puede implementar cambio via POST
+        racer_name = self.race_controller.get_racer_name()
+        return self.json_response({
+            "success": True,
+            "racer_name": racer_name,
+            "message": "Nombre del piloto obtenido"
+        })
+    
+    def api_racer_name_set(self, request):
+        """API: Cambiar nombre del piloto (GET con parámetro name)"""
+        # Leer el nombre desde los parámetros de la URL
+        new_name = "PILOTO"  # Nombre por defecto
+        
+        # Intentar leer el parámetro name de la URL
+        try:
+            # Buscar el parámetro name en la URL
+            if "name=" in request:
+                # Extraer el valor del parámetro name
+                name_start = request.find("name=") + 5
+                name_end = request.find("&", name_start)
+                if name_end == -1:
+                    name_end = request.find(" ", name_start)
+                if name_end == -1:
+                    name_end = len(request)
+                
+                if name_start < name_end:
+                    new_name = request[name_start:name_end]
+                    # Decodificar URL encoding
+                    new_name = new_name.replace("%20", " ").replace("+", " ")
+        except:
+            pass  # Si hay error, usar el nombre por defecto
+        
+        success = self.race_controller.set_racer_name(new_name)
+        
+        if success:
+            return self.json_response({
+                "success": True,
+                "racer_name": new_name,
+                "message": "Nombre del piloto actualizado y mostrado en display"
+            })
+        else:
+            return self.json_response({
+                "success": False,
+                "message": "Error al actualizar nombre del piloto"
+            })
+    
+    def api_racer_display(self):
+        """API: Mostrar nombre del piloto en display"""
+        self.race_controller.display_racer_name()
+        return self.json_response({
+            "success": True,
+            "message": "Nombre del piloto mostrado en display"
+        })
+    
+    def api_racer_scroll_speed(self, request):
+        """API: Obtener o cambiar velocidad del scroll del nombre del piloto"""
+        # Por ahora solo retorna la velocidad actual
+        # En el futuro se puede implementar cambio via parámetros
+        current_speed = self.race_controller.get_scroll_speed()
+        return self.json_response({
+            "success": True,
+            "scroll_speed": current_speed,
+            "message": "Velocidad de scroll obtenida"
         })
         
     def json_response(self, data):

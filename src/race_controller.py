@@ -7,6 +7,7 @@ import time
 from machine import Pin
 from max7219_dual_display_configurable import MAX7219DualDisplayConfigurable
 from config import *
+from patterns.animations import get_animation_patterns
 
 class RaceController:
     def __init__(self, max_laps=RACE_MAX_LAPS):
@@ -15,6 +16,9 @@ class RaceController:
         self.current_laps = 0
         self.is_completed = False
         self.last_sensor_time = 0
+        
+        # Inicializar nombre del piloto
+        self.racer_name = RACER_NAME
         
         # Inicializar LED
         self.led = Pin(LED_PIN_RED, Pin.OUT)
@@ -36,6 +40,7 @@ class RaceController:
         
         if DEBUG_ENABLED:
             print(f"[RACE] Controlador inicializado - Máximo: {max_laps} vueltas")
+            print(f"[RACE] Piloto: {self.racer_name}")
     
     def increment_lap(self):
         """Incrementa el contador de vueltas"""
@@ -126,14 +131,8 @@ class RaceController:
     
     def _show_checkered_flag_animation(self):
         """Muestra animación de bandera a cuadros clásica con cuadros 2x2 que alterna patrones"""
-        # Dos patrones complementarios de bandera a cuadros 2x2
-        # Cuando uno se apaga, el otro se enciende para mantener el display activo
-        checkered_patterns = [
-            # Patrón 1: cuadros 2x2 (0xCC = 11001100, 0x33 = 00110011)
-            [0xCC, 0xCC, 0x33, 0x33, 0xCC, 0xCC, 0x33, 0x33],
-            # Patrón 2: cuadros complementarios (0x33 = 00110011, 0xCC = 11001100)
-            [0x33, 0x33, 0xCC, 0xCC, 0x33, 0x33, 0xCC, 0xCC],
-        ]
+        # Usar patrones centralizados
+        checkered_patterns = get_animation_patterns('checkered')
         
         start_time = time.time()
         pattern_index = 0
@@ -183,16 +182,8 @@ class RaceController:
     
     def _show_pulse_flag_animation(self):
         """Muestra animación de bandera pulsante"""
-        # Patrones que pulsan desde el centro
-        pulse_patterns = [
-            [0x00, 0x00, 0x00, 0x18, 0x18, 0x00, 0x00, 0x00],
-            [0x00, 0x00, 0x3C, 0x3C, 0x3C, 0x3C, 0x00, 0x00],
-            [0x00, 0x7E, 0x7E, 0x7E, 0x7E, 0x7E, 0x7E, 0x00],
-            [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF],
-            [0x00, 0x7E, 0x7E, 0x7E, 0x7E, 0x7E, 0x7E, 0x00],
-            [0x00, 0x00, 0x3C, 0x3C, 0x3C, 0x3C, 0x00, 0x00],
-            [0x00, 0x00, 0x00, 0x18, 0x18, 0x00, 0x00, 0x00],
-        ]
+        # Usar patrones centralizados
+        pulse_patterns = get_animation_patterns('pulse')
         
         start_time = time.time()
         pattern_index = 0
@@ -210,17 +201,8 @@ class RaceController:
     
     def _show_wave_flag_animation(self):
         """Muestra animación de bandera ondulante"""
-        # Patrones que simulan ondas
-        wave_patterns = [
-            [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80],
-            [0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x01],
-            [0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x01, 0x02],
-            [0x08, 0x10, 0x20, 0x40, 0x80, 0x01, 0x02, 0x04],
-            [0x10, 0x20, 0x40, 0x80, 0x01, 0x02, 0x04, 0x08],
-            [0x20, 0x40, 0x80, 0x01, 0x02, 0x04, 0x08, 0x10],
-            [0x40, 0x80, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20],
-            [0x80, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40],
-        ]
+        # Usar patrones centralizados
+        wave_patterns = get_animation_patterns('wave')
         
         start_time = time.time()
         pattern_index = 0
@@ -246,6 +228,7 @@ class RaceController:
             'remaining_laps': max(0, self.max_laps - self.current_laps),
             'is_completed': self.is_completed,
             'progress_percentage': progress_percentage,
+            'racer_name': self.racer_name,
             'led_status': {
                 'is_on': self.led.value() == 1
             }
@@ -300,6 +283,18 @@ class RaceController:
         if DEBUG_ENABLED:
             print(f"[RACE] Orientación cambiada a: {orientation}")
     
+    def set_scroll_speed(self, speed):
+        """Cambia la velocidad del scroll del nombre del piloto"""
+        global RACER_NAME_SCROLL_SPEED
+        RACER_NAME_SCROLL_SPEED = max(0.1, min(1.0, speed))  # Limitar entre 0.1 y 1.0 segundos
+        
+        if DEBUG_ENABLED:
+            print(f"[RACE] Velocidad de scroll cambiada a: {RACER_NAME_SCROLL_SPEED}s")
+    
+    def get_scroll_speed(self):
+        """Retorna la velocidad actual del scroll"""
+        return RACER_NAME_SCROLL_SPEED
+    
     def set_completion_animation(self, animation_type):
         """Cambia la animación de finalización"""
         if animation_type in ANIMATION_TYPES:
@@ -329,6 +324,51 @@ class RaceController:
             if DEBUG_ENABLED:
                 print(f"[RACE] Animación no válida: {animation_type}")
             return False
+    
+    def get_racer_name(self):
+        """Retorna el nombre actual del piloto"""
+        return self.racer_name
+    
+    def set_racer_name(self, name):
+        """Cambia el nombre del piloto y lo muestra en el display"""
+        if name and len(name) <= RACER_NAME_MAX_LENGTH:
+            self.racer_name = name
+            if DEBUG_ENABLED:
+                print(f"[RACE] Nombre del piloto cambiado a: {name}")
+            
+            # Mostrar el nombre con scroll después de guardarlo
+            self.display_racer_name_with_scroll()
+            return True
+        else:
+            if DEBUG_ENABLED:
+                print(f"[RACE] Nombre inválido: {name}")
+            return False
+    
+    def display_racer_name(self):
+        """Muestra el nombre del piloto en el display con casco"""
+        racer_display_text = RACER_DISPLAY_PREFIX + self.racer_name
+        if DEBUG_ENABLED:
+            print(f"[RACE] Mostrando nombre del piloto: {racer_display_text}")
+        # Mostrar solo la primera letra del nombre
+        name_only = self.racer_name[:1]
+        if len(name_only) == 1 and name_only[0].isalpha():
+            char_num = ord(name_only[0].upper()) - ord('A') + 1
+            if char_num > 99:
+                char_num = 99
+            self.display.show_helmet_and_digit(char_num)
+        else:
+            self.display.show_helmet_and_digit(0)
+    
+    def display_racer_name_with_scroll(self):
+        """Muestra el nombre del piloto con scroll: [Casco] NOMBRE PILOTO"""
+        if DEBUG_ENABLED:
+            print(f"[RACE] Mostrando nombre con scroll: {self.racer_name.upper()}")
+        
+        # Mostrar scroll del texto con casco real y velocidad configurable
+        self.display.scroll_text_with_helmet(self.racer_name, scroll_speed=RACER_NAME_SCROLL_SPEED, repeat=False)
+        
+        # Después del scroll, volver al estado normal del display
+        self.update_display()
     
     def cleanup(self):
         """Limpia recursos al finalizar"""

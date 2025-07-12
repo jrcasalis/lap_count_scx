@@ -68,6 +68,14 @@ SENSOR_DEBOUNCE_TIME = 0.1  # Tiempo de debounce en segundos
 SENSOR_AUTO_INCREMENT = True  # Incrementar automáticamente con sensor
 
 # =============================================================================
+# CONFIGURACIÓN DEL PILOTO
+# =============================================================================
+RACER_NAME = "Racer 1"  # Nombre por defecto del piloto
+RACER_NAME_MAX_LENGTH = 10  # Longitud máxima del nombre
+RACER_DISPLAY_PREFIX = "🏎️ "  # Prefijo para mostrar en display
+RACER_NAME_SCROLL_SPEED = 0.15  # Velocidad del scroll del nombre (segundos) - Más rápido para mejor fluidez
+
+# =============================================================================
 # CONFIGURACIÓN DE DEBUG
 # =============================================================================
 DEBUG_ENABLED = True      # Habilitar mensajes de debug

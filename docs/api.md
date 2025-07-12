@@ -81,7 +81,31 @@ Sirve la interfaz web principal para controlar el sistema.
 
 ---
 
-### 5. Archivos Web
+### 5. Nombre del Piloto
+
+- **GET** `/api/racer/name` - Obtiene el nombre actual del piloto
+- **GET** `/api/racer/display` - Muestra el nombre del piloto en el display con emoji de casco
+
+**Ejemplo de respuesta para `/api/racer/name`:**
+```json
+{
+    "success": true,
+    "racer_name": "Jose Casalis",
+    "message": "Nombre del piloto obtenido"
+}
+```
+
+**Ejemplo de respuesta para `/api/racer/display`:**
+```json
+{
+    "success": true,
+    "message": "Nombre del piloto mostrado en display"
+}
+```
+
+---
+
+### 6. Archivos Web
 
 - **GET** `/style.css` - Sirve los estilos CSS
 - **GET** `/script.js` - Sirve el JavaScript del frontend

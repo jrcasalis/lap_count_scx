@@ -31,6 +31,9 @@ def copy_files_to_pico():
         ('examples/test_simple_configurable.py', 'test_simple_configurable.py'),
         ('examples/test_rotation_examples.py', 'test_rotation_examples.py'),
         ('examples/test_configurable_display.py', 'test_configurable_display.py'),
+        ('examples/test_racer_name.py', 'test_racer_name.py'),
+        ('examples/test_racer_name_scroll.py', 'test_racer_name_scroll.py'),
+        ('examples/test_web_racer_name_fixed.py', 'test_web_racer_name_fixed.py'),
     ]
     
     print("Copiando archivos a la Raspberry Pi Pico...")
@@ -57,6 +60,12 @@ def copy_files_to_pico():
     print("   exec(open('test_animations.py').read())")
     print("6. Para probar la integración web:")
     print("   exec(open('test_web_integration.py').read())")
+    print("7. Para probar el nombre del piloto:")
+    print("   exec(open('test_racer_name.py').read())")
+    print("8. Para probar el scroll del nombre del piloto:")
+    print("   exec(open('test_racer_name_scroll.py').read())")
+    print("9. Para probar el nombre del piloto desde la web:")
+    print("   exec(open('test_web_racer_name_fixed.py').read())")
     print("\nPara ejecutar el proyecto completo:")
     print("1. Ejecuta: exec(open('main.py').read())")
 

@@ -5,8 +5,8 @@ en lugar de encender y apagar completamente el display
 """
 
 import time
-from src.race_controller import RaceController
-from src.config import *
+from race_controller import RaceController
+from config import *
 
 def test_checkered_flag_alternating():
     """Prueba la animación de bandera a cuadros con alternancia de patrones"""

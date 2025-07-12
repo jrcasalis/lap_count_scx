@@ -50,6 +50,27 @@
                 </button>
             </div>
             
+            <div class="racer-section">
+                <h3>🏎️ Piloto</h3>
+                <div class="racer-controls">
+                    <div class="racer-info">
+                        <label for="racerName">Nombre del piloto:</label>
+                        <input type="text" id="racerName" placeholder="Nombre del piloto" maxlength="10">
+                        <button class="btn btn-info" onclick="setRacerName()">
+                            <span class="icon">💾</span>
+                            Guardar Nombre
+                        </button>
+                    </div>
+                    <div class="racer-display">
+                        <button class="btn btn-warning" onclick="displayRacerName()">
+                            <span class="icon">📺</span>
+                            Mostrar en Display
+                        </button>
+                        <span id="currentRacerName">Racer 1</span>
+                    </div>
+                </div>
+            </div>
+            
             <div class="info">
                 <h3>Información del Sistema</h3>
                 <p><strong>Dispositivo:</strong> Raspberry Pi Pico 2W</p>

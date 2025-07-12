@@ -107,6 +107,64 @@ main {
     margin-bottom: 30px;
 }
 
+.racer-section {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 15px;
+    border: 2px solid #e9ecef;
+    margin-bottom: 30px;
+}
+
+.racer-section h3 {
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 1.3rem;
+    text-align: center;
+}
+
+.racer-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+.racer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.racer-info label {
+    font-weight: bold;
+    color: #333;
+}
+
+.racer-info input {
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.racer-info input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.racer-display {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    justify-content: center;
+}
+
+#currentRacerName {
+    font-weight: bold;
+    color: #333;
+    font-size: 1.1rem;
+}
+
 .btn {
     padding: 15px 20px;
     border: none;
@@ -140,6 +198,16 @@ main {
 .btn-secondary {
     background: linear-gradient(45deg, #666, #888);
     color: white;
+}
+
+.btn-info {
+    background: linear-gradient(45deg, #17a2b8, #20c997);
+    color: white;
+}
+
+.btn-warning {
+    background: linear-gradient(45deg, #ffc107, #ffca2c);
+    color: #333;
 }
 
 .btn-toggle {
