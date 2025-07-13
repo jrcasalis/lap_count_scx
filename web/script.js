@@ -567,25 +567,36 @@ async function stopRace() {
     }
 }
 
-// Función para obtener estado del semáforo - OPTIMIZADA PARA VELOCIDAD
+// Función para obtener estado del semáforo - ULTRA-OPTIMIZADA
 async function getTrafficLightStatus() {
     try {
-        const response = await fetch('/api/traffic-light/status');
+        const response = await fetch('/api/traffic-light/status', {
+            method: 'GET',
+            headers: {
+                'Cache-Control': 'no-cache'
+            }
+        });
         const data = await response.json();
         
         if (data.success) {
-            // Solo actualizar si el estado realmente cambió para optimizar rendimiento
+            // Solo actualizar si el estado realmente cambió
             const oldState = JSON.stringify(trafficLightStatus);
             trafficLightStatus = data.traffic_light_status;
             const newState = JSON.stringify(trafficLightStatus);
             
             if (oldState !== newState) {
                 updateTrafficLightUI();
-                console.log('🔄 Estado del semáforo actualizado:', trafficLightStatus.state);
+                // Log solo en debug
+                if (DEBUG_ENABLED) {
+                    console.log('🔄 Estado del semáforo actualizado:', trafficLightStatus.state);
+                }
             }
         }
     } catch (error) {
-        console.error('Error obteniendo estado del semáforo:', error);
+        // Solo log en debug para no saturar consola
+        if (DEBUG_ENABLED) {
+            console.error('Error obteniendo estado del semáforo:', error);
+        }
     }
 }
 
@@ -684,35 +695,55 @@ function convertToUpperCase(input) {
 }
 
 // =============================================================================
-// INICIALIZACIÓN Y ACTUALIZACIÓN CONTINUA OPTIMIZADA
+// INICIALIZACIÓN Y ACTUALIZACIÓN CONTINUA ULTRA-OPTIMIZADA
 // =============================================================================
 
-// Función para actualizar datos en tiempo real - OPTIMIZADA
+// Cache para evitar actualizaciones innecesarias
+let lastRaceStatus = null;
+let lastTrafficStatus = null;
+let updateCounter = 0;
+
+// Función para actualizar datos en tiempo real - ULTRA-OPTIMIZADA
 async function updateRealtimeData() {
-    await getStatus();
-    await getTrafficLightStatus();
-    updateUI();
+    try {
+        // Actualizar solo si es necesario (cada 3 ciclos)
+        if (updateCounter % 3 === 0) {
+            await getStatus();
+        }
+        
+        // Actualizar semáforo más frecuentemente
+        await getTrafficLightStatus();
+        updateUI();
+        
+        updateCounter++;
+    } catch (error) {
+        console.error('❌ Error en actualización:', error);
+    }
 }
 
-// Función de inicialización - OPTIMIZADA PARA SINCRONIZACIÓN ULTRA-RÁPIDA
+// Función de inicialización - ULTRA-OPTIMIZADA PARA VELOCIDAD MÁXIMA
 async function initializeApp() {
+    console.log('🚀 Iniciando aplicación ultra-optimizada...');
+    
     updateDeviceIP();
+    
+    // Cargar datos iniciales
     await updateRealtimeData();
     
-    // ACTUALIZACIÓN ULTRA-RÁPIDA: 0.3 segundos para sincronización perfecta
-    setInterval(updateRealtimeData, 300);
+    // ACTUALIZACIÓN ULTRA-RÁPIDA: 200ms para máxima velocidad
+    setInterval(updateRealtimeData, 200);
     
-    // Sincronización ultra-rápida del semáforo cada 100ms para máxima precisión
-    setInterval(getTrafficLightStatus, 100);
+    // Sincronización ultra-rápida del semáforo cada 80ms
+    setInterval(getTrafficLightStatus, 80);
     
-    // Sincronización visual ultra-rápida cada 50ms para el verde crítico
-    setInterval(syncTrafficLightVisual, 50);
+    // Sincronización visual ultra-rápida cada 40ms
+    setInterval(syncTrafficLightVisual, 40);
     
-    // Verificar conectividad cada 5 segundos
-    setInterval(checkConnectivity, 5000);
+    // Verificar conectividad cada 3 segundos
+    setInterval(checkConnectivity, 3000);
     
-    console.log('🚀 Aplicación inicializada con sincronización ultra-rápida');
-    console.log('⚡ Semáforos: 100ms | Visual: 50ms | General: 300ms');
+    console.log('⚡ Aplicación ultra-optimizada inicializada');
+    console.log('🚀 Actualización: 200ms | Semáforos: 80ms | Visual: 40ms');
 }
 
 // Inicializar cuando el DOM esté listo
