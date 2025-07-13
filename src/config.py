@@ -68,6 +68,33 @@ SENSOR_DEBOUNCE_TIME = 0.1  # Tiempo de debounce en segundos
 SENSOR_AUTO_INCREMENT = True  # Incrementar automáticamente con sensor
 
 # =============================================================================
+# CONFIGURACIÓN DEL SEMÁFORO
+# =============================================================================
+# Pines del semáforo
+TRAFFIC_LIGHT_RED_PIN = 11    # Luz roja en GPIO11
+TRAFFIC_LIGHT_YELLOW_PIN = 12 # Luz amarilla en GPIO12
+TRAFFIC_LIGHT_GREEN_PIN = 13  # Luz verde en GPIO13
+
+# Tiempos del semáforo (en segundos)
+TRAFFIC_LIGHT_BLINK_INTERVAL = 0.5  # Tiempo de intermitencia para titileo
+TRAFFIC_LIGHT_RED_DURATION = 3.0     # Duración de luz roja
+TRAFFIC_LIGHT_YELLOW_DURATION = 3.0  # Duración de luz amarilla
+TRAFFIC_LIGHT_GREEN_DURATION = 0     # Duración de luz verde (0 = indefinido)
+
+# Configuración PWM para módulo de 5V en 3.3V
+TRAFFIC_LIGHT_PWM_FREQ = 1000       # Frecuencia PWM (Hz)
+TRAFFIC_LIGHT_DUTY_ON = 1023         # Duty cycle máximo (100%)
+TRAFFIC_LIGHT_DUTY_OFF = 0           # Duty cycle mínimo (0%)
+TRAFFIC_LIGHT_VOLTAGE_COMPENSATION = True  # Habilitar compensación de voltaje
+
+# Estados del semáforo
+TRAFFIC_LIGHT_STATE_OFF = "off"
+TRAFFIC_LIGHT_STATE_BLINKING = "blinking"
+TRAFFIC_LIGHT_STATE_RED = "red"
+TRAFFIC_LIGHT_STATE_YELLOW = "yellow"
+TRAFFIC_LIGHT_STATE_GREEN = "green"
+
+# =============================================================================
 # CONFIGURACIÓN DEL PILOTO
 # =============================================================================
 RACER_NAME = "Racer 1"  # Nombre por defecto del piloto

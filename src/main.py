@@ -45,7 +45,7 @@ def main():
     race_controller = RaceController(max_laps=RACE_MAX_LAPS)
     
     # Inicializar sensor TCRT5000
-    sensor = Pin(SENSOR_TCRT5000_PIN, Pin.IN)
+    sensor = Pin(SENSOR_TCRT5000_PIN, Pin.IN, Pin.PULL_UP)
     last_sensor_state = sensor.value()
     
     # Conectar WiFi
@@ -61,16 +61,25 @@ def main():
     print("Presiona Ctrl+C para detener")
     
     try:
-        # Bucle principal del servidor
+        # Bucle principal optimizado para respuesta inmediata
         while True:
+            # Manejar peticiones web (sin bloqueo)
             web_server.handle_requests()
+            
+            # Detección inmediata del sensor
             current_sensor_state = sensor.value()
-            # Detectar flanco descendente (detección de objeto)
+            
+            # Detectar flanco descendente (detección de objeto) - respuesta inmediata
             if last_sensor_state == 1 and current_sensor_state == 0:
                 print("[TCRT5000] Detección de objeto - Incrementando vuelta")
-                race_controller.increment_lap()
+                # Incrementar inmediatamente sin delays
+                race_controller.increment_lap_immediate()
+            
             last_sensor_state = current_sensor_state
-            time.sleep(0.01)  # Pequeña pausa para no saturar el CPU
+            
+            # Micro-pausa mínima para no saturar el CPU pero mantener respuesta rápida
+            time.sleep(0.001)  # 1ms en lugar de 10ms
+            
     except KeyboardInterrupt:
         print("\nDeteniendo servidor...")
         race_controller.cleanup()

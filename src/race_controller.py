@@ -6,6 +6,7 @@ Integra el display MAX7219 configurable y animaciones
 import time
 from machine import Pin
 from max7219_dual_display_configurable import MAX7219DualDisplayConfigurable
+from traffic_light_controller import TrafficLightController
 from config import *
 from patterns.animations import get_animation_patterns
 
@@ -15,6 +16,7 @@ class RaceController:
         self.max_laps = max_laps
         self.current_laps = 0
         self.is_completed = False
+        self.is_race_started = False  # Nuevo estado: carrera iniciada
         self.last_sensor_time = 0
         
         # Inicializar nombre del piloto
@@ -23,6 +25,9 @@ class RaceController:
         # Inicializar LED
         self.led = Pin(LED_PIN_RED, Pin.OUT)
         self.led.off()
+        
+        # Inicializar semáforo con referencia al controlador de carrera
+        self.traffic_light = TrafficLightController(self)
         
         # Inicializar display configurable
         self.display = MAX7219DualDisplayConfigurable(
@@ -41,12 +46,19 @@ class RaceController:
         if DEBUG_ENABLED:
             print(f"[RACE] Controlador inicializado - Máximo: {max_laps} vueltas")
             print(f"[RACE] Piloto: {self.racer_name}")
+            print(f"[RACE] Estado inicial: Carrera no iniciada")
     
     def increment_lap(self):
-        """Incrementa el contador de vueltas"""
+        """Incrementa el contador de vueltas solo si la carrera está iniciada"""
         if self.is_completed:
             if DEBUG_ENABLED:
                 print("[RACE] Carrera ya completada")
+            return False
+        
+        # Verificar si la carrera está iniciada
+        if not self.is_race_started:
+            if DEBUG_ENABLED:
+                print("[RACE] Carrera no iniciada - ignorando detección del sensor")
             return False
         
         # Verificar debounce del sensor
@@ -70,10 +82,85 @@ class RaceController:
         
         return True
     
+    def increment_lap_immediate(self):
+        """Incrementa el contador de vueltas inmediatamente sin debounce para respuesta rápida"""
+        if self.is_completed:
+            if DEBUG_ENABLED:
+                print("[RACE] Carrera ya completada")
+            return False
+        
+        # Verificar si la carrera está iniciada
+        if not self.is_race_started:
+            if DEBUG_ENABLED:
+                print("[RACE] Carrera no iniciada - ignorando detección del sensor")
+            return False
+        
+        # Incrementar inmediatamente sin debounce para respuesta rápida
+        self.current_laps += 1
+        
+        if DEBUG_ENABLED:
+            print(f"[RACE] Vuelta incrementada inmediatamente: {self.current_laps}/{self.max_laps}")
+        
+        # Actualizar display inmediatamente
+        self.update_display()
+        
+        # Verificar si la carrera está completada
+        if self.current_laps >= self.max_laps:
+            self.complete_race()
+        
+        return True
+    
+    def start_race(self):
+        """Inicia la carrera - permite que el sensor cuente vueltas"""
+        # Si hay previa activa, terminarla automáticamente sin mensajes
+        if self.traffic_light and self.traffic_light.current_state == TRAFFIC_LIGHT_STATE_BLINKING:
+            if DEBUG_ENABLED:
+                print("[RACE] Previa activa detectada - terminando automáticamente")
+            try:
+                self.traffic_light.race_previous_stop()
+                # Esperar un momento para que se complete la terminación
+                time.sleep(0.1)
+            except Exception as e:
+                if DEBUG_ENABLED:
+                    print(f"[RACE] Error terminando previa: {e}")
+        
+        # Verificar que la previa se terminó correctamente
+        if self.traffic_light and self.traffic_light.current_state == TRAFFIC_LIGHT_STATE_BLINKING:
+            if DEBUG_ENABLED:
+                print("[RACE] Previa aún activa después de intentar terminarla")
+            # Intentar terminar nuevamente
+            try:
+                self.traffic_light.race_previous_stop()
+                time.sleep(0.1)
+            except Exception as e:
+                if DEBUG_ENABLED:
+                    print(f"[RACE] Error en segundo intento de terminar previa: {e}")
+        
+        self.is_race_started = True
+        
+        if DEBUG_ENABLED:
+            print("[RACE] Carrera iniciada - Sensor activo")
+        
+        return True
+    
+    def stop_race(self):
+        """Detiene la carrera - el sensor no cuenta vueltas"""
+        self.is_race_started = False
+        
+        if DEBUG_ENABLED:
+            print("[RACE] Carrera detenida - Sensor inactivo")
+        
+        return True
+    
+    def is_race_running(self):
+        """Retorna True si la carrera está iniciada y no completada"""
+        return self.is_race_started and not self.is_completed
+    
     def reset_race(self):
         """Reinicia la carrera"""
         self.current_laps = 0
         self.is_completed = False
+        self.is_race_started = False  # Resetear estado de carrera iniciada
         self.last_sensor_time = 0
         
         if DEBUG_ENABLED:
@@ -83,7 +170,7 @@ class RaceController:
         return True
     
     def complete_race(self):
-        """Marca la carrera como completada y muestra animación"""
+        """Marca la carrera como completada, muestra animación y termina automáticamente"""
         self.is_completed = True
         
         if DEBUG_ENABLED:
@@ -95,10 +182,31 @@ class RaceController:
         else:
             self.update_display()
         
-        # Reiniciar automáticamente si está habilitado
-        if RACE_AUTO_RESET:
-            time.sleep(FLAG_ANIMATION_DURATION)
-            self.reset_race()
+        # Esperar a que termine la animación de bandera
+        time.sleep(FLAG_ANIMATION_DURATION)
+        
+        # Terminar la carrera automáticamente
+        self._finish_race_automatically()
+    
+    def _finish_race_automatically(self):
+        """Termina la carrera automáticamente: apaga semáforos, resetea vueltas"""
+        if DEBUG_ENABLED:
+            print("[RACE] Finalizando carrera automáticamente...")
+        
+        # 1. Apagar semáforos
+        if self.traffic_light:
+            self.traffic_light.race_stop()
+            if DEBUG_ENABLED:
+                print("[RACE] Semáforos apagados")
+        
+        # 2. Detener la carrera
+        self.stop_race()
+        
+        # 3. Resetear vueltas
+        self.reset_race()
+        
+        if DEBUG_ENABLED:
+            print("[RACE] Carrera finalizada automáticamente")
     
     def update_display(self):
         """Actualiza el display con el contador actual"""
@@ -227,6 +335,8 @@ class RaceController:
             'max_laps': self.max_laps,
             'remaining_laps': max(0, self.max_laps - self.current_laps),
             'is_completed': self.is_completed,
+            'is_race_started': self.is_race_started,
+            'is_race_running': self.is_race_running(),
             'progress_percentage': progress_percentage,
             'racer_name': self.racer_name,
             'led_status': {
@@ -370,10 +480,35 @@ class RaceController:
         # Después del scroll, volver al estado normal del display
         self.update_display()
     
+    # =============================================================================
+    # MÉTODOS DEL SEMÁFORO
+    # =============================================================================
+    
+    def race_previous(self):
+        """Inicia el titileo de todas las luces del semáforo"""
+        return self.traffic_light.race_previous()
+    
+    def race_previous_stop(self):
+        """Detiene el titileo de todas las luces del semáforo"""
+        return self.traffic_light.race_previous_stop()
+    
+    def race_start(self):
+        """Inicia la secuencia de largada: Roja -> Amarilla -> Verde"""
+        return self.traffic_light.race_start()
+    
+    def race_stop(self):
+        """Apaga las luces verdes del semáforo"""
+        return self.traffic_light.race_stop()
+    
+    def get_traffic_light_status(self):
+        """Retorna el estado actual del semáforo"""
+        return self.traffic_light.get_status()
+    
     def cleanup(self):
         """Limpia recursos al finalizar"""
         self.led.off()
         self.display.clear()
+        self.traffic_light.cleanup()
         
         if DEBUG_ENABLED:
             print("[RACE] Limpieza completada") 

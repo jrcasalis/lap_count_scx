@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controlador LED - Raspberry Pi Pico 2W</title>
+    <title>Controlador de Carrera - Raspberry Pi Pico 2W</title>
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -14,71 +14,237 @@
         </header>
         
         <main>
-            <div class="race-status">
-                <div class="lap-counter">
-                    <h3>Contador de Vueltas</h3>
-                    <div class="lap-display">
-                        <span id="currentLap">0</span>
-                        <span class="separator">/</span>
-                        <span id="maxLaps">15</span>
+            <!-- Cards Grid Responsivo -->
+            <div class="cards-grid">
+                
+                <!-- Card 1: Estado de la Carrera -->
+                <div class="card race-status-card">
+                    <div class="card-header">
+                        <h3>🏁 Estado de la Carrera</h3>
                     </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressFill"></div>
+                    <div class="card-body">
+                        <div class="lap-counter">
+                            <div class="lap-display">
+                                <span id="currentLap">0</span>
+                                <span class="separator">/</span>
+                                <span id="maxLaps">15</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progressFill"></div>
+                            </div>
+                            <p id="raceStatus" class="status-text">Listo para comenzar</p>
+                            <div class="race-state-info">
+                                <div class="state-item">
+                                    <span class="state-label">Carrera:</span>
+                                    <span id="raceState" class="state-value">No Iniciada</span>
+                                </div>
+                                <div class="state-item">
+                                    <span class="state-label">Vueltas:</span>
+                                    <span id="lapCount" class="state-value">0</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <p id="raceStatus">Listo para comenzar</p>
+                    <div class="card-footer">
+                        <button class="btn btn-primary" onclick="incrementLap()">
+                            <span class="icon">🏁</span>
+                            Incrementar Vuelta
+                        </button>
+                        <button class="btn btn-secondary" onclick="resetRace()">
+                            <span class="icon">🔄</span>
+                            Reiniciar
+                        </button>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="controls">
-                <button class="btn btn-primary" onclick="incrementLap()">
-                    <span class="icon">🏁</span>
-                    Incrementar Vuelta
-                </button>
                 
-                <button class="btn btn-secondary" onclick="resetRace()">
-                    <span class="icon">🔄</span>
-                    Reiniciar Carrera
-                </button>
-                
-                <button class="btn btn-success" onclick="turnOnLED()">
-                    <span class="icon">🔴</span>
-                    Encender LED
-                </button>
-                <button class="btn btn-danger" onclick="turnOffLED()">
-                    <span class="icon">⚪</span>
-                    Apagar LED
-                </button>
-            </div>
-            
-            <div class="racer-section">
-                <h3>🏎️ Piloto</h3>
-                <div class="racer-controls">
-                    <div class="racer-info">
-                        <label for="racerName">Nombre del piloto:</label>
-                        <input type="text" id="racerName" placeholder="Nombre del piloto" maxlength="10">
+                <!-- Card 2: Piloto -->
+                <div class="card racer-card">
+                    <div class="card-header">
+                        <h3>🏎️ Piloto</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="racer-info">
+                            <label for="racerName">Nombre:</label>
+                            <input type="text" id="racerName" placeholder="Nombre del piloto" maxlength="10">
+                            <div class="current-racer">
+                                <span>Actual: </span>
+                                <span id="currentRacerName" class="racer-name">Racer 1</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
                         <button class="btn btn-info" onclick="setRacerName()">
                             <span class="icon">💾</span>
-                            Guardar Nombre
+                            Guardar
                         </button>
-                    </div>
-                    <div class="racer-display">
                         <button class="btn btn-warning" onclick="displayRacerName()">
                             <span class="icon">📺</span>
-                            Mostrar en Display
+                            Mostrar
                         </button>
-                        <span id="currentRacerName">Racer 1</span>
                     </div>
                 </div>
-            </div>
-            
-            <div class="info">
-                <h3>Información del Sistema</h3>
-                <p><strong>Dispositivo:</strong> Raspberry Pi Pico 2W</p>
-                <p><strong>Display:</strong> MAX7219 (GP2, GP3, GP4)</p>
-                <p><strong>LED:</strong> GP0</p>
-                <p><strong>Sensor:</strong> TCRT5000 (GP16)</p>
-                <p><strong>IP:</strong> <span id="deviceIP">Cargando...</span></p>
-                <p><strong>Estado de conexión:</strong> <span id="connectionStatus">Conectando...</span></p>
+                
+                <!-- Card 3: Semáforo -->
+                <div class="card traffic-light-card">
+                    <div class="card-header">
+                        <h3>🚦 Semáforo</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="traffic-lights-row">
+                            <div class="traffic-light-container">
+                                <div class="traffic-light-pole"></div>
+                                <div class="traffic-light-housing">
+                                    <div class="light red-light" id="redLight1">
+                                        <div class="light-bulb"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                    <div class="light yellow-light" id="yellowLight1">
+                                        <div class="light-bulb"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                    <div class="light green-light" id="greenLight1">
+                                        <div class="light-bulb"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="traffic-light-container">
+                                <div class="traffic-light-pole"></div>
+                                <div class="traffic-light-housing">
+                                    <div class="light red-light" id="redLight2">
+                                        <div class="light-bulb"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                    <div class="light yellow-light" id="yellowLight2">
+                                        <div class="light-bulb"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                    <div class="light green-light" id="greenLight2">
+                                        <div class="light-bulb"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="traffic-light-container">
+                                <div class="traffic-light-pole"></div>
+                                <div class="traffic-light-housing">
+                                    <div class="light red-light" id="redLight3">
+                                        <div class="light-bulb"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                    <div class="light yellow-light" id="yellowLight3">
+                                        <div class="light-bulb"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                    <div class="light green-light" id="greenLight3">
+                                        <div class="light-bulb"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="traffic-light-container">
+                                <div class="traffic-light-pole"></div>
+                                <div class="traffic-light-housing">
+                                    <div class="light red-light" id="redLight4">
+                                        <div class="light-bulb"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                    <div class="light yellow-light" id="yellowLight4">
+                                        <div class="light-bulb"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                    <div class="light green-light" id="greenLight4">
+                                        <div class="light-bulb"></div>
+                                        <div class="light-glow"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="traffic-status">
+                            <div class="status-item">
+                                <span class="status-label">Estado:</span>
+                                <span id="trafficLightStatus" class="status-value">Apagado</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Luces:</span>
+                                <span id="trafficLightsState" class="status-value">Roja: OFF | Amarilla: OFF | Verde: OFF</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Carrera:</span>
+                                <span id="raceInitStatus" class="status-value">No Iniciada</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-warning" onclick="startRacePrevious()">
+                            <span class="icon">⚠️</span>
+                            Iniciar Previa
+                        </button>
+                        <button class="btn btn-danger" onclick="stopRacePrevious()" id="stopPreviousBtn" style="display: none;">
+                            <span class="icon">⏹️</span>
+                            Terminar Previa
+                        </button>
+                        <button class="btn btn-success" onclick="startRace()">
+                            <span class="icon">🏁</span>
+                            Largar
+                        </button>
+                        <button class="btn btn-secondary" onclick="stopRace()">
+                            <span class="icon">🛑</span>
+                            Parar
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Card 4: Información del Sistema -->
+                <div class="card system-info-card">
+                    <div class="card-header">
+                        <h3>ℹ️ Sistema</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="system-info">
+                            <p><strong>Dispositivo:</strong> Raspberry Pi Pico 2W</p>
+                            <p><strong>Display:</strong> MAX7219</p>
+                            <p><strong>LED:</strong> GP0</p>
+                            <p><strong>Sensor:</strong> TCRT5000 (GP16)</p>
+                            <p><strong>IP:</strong> <span id="deviceIP">Cargando...</span></p>
+                            <p><strong>Estado:</strong> <span id="connectionStatus">Conectando...</span></p>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-secondary" onclick="refreshStatus()">
+                            <span class="icon">🔄</span>
+                            Actualizar
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Card 5: Control LED (penúltimo lugar) -->
+                <div class="card led-control-card">
+                    <div class="card-header">
+                        <h3>🔴 Control LED</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="led-status">
+                            <div class="led-indicator" id="ledIndicator"></div>
+                            <span id="ledStatus">Apagado</span>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-success" onclick="turnOnLED()">
+                            <span class="icon">🔴</span>
+                            Encender
+                        </button>
+                        <button class="btn btn-danger" onclick="turnOffLED()">
+                            <span class="icon">⚪</span>
+                            Apagar
+                        </button>
+                    </div>
+                </div>
+                
             </div>
         </main>
         

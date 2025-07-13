@@ -7,7 +7,8 @@ import socket
 import json
 import gc
 import os
-from config import LED_PIN_RED
+import time
+from config import LED_PIN_RED, TRAFFIC_LIGHT_STATE_BLINKING, DEBUG_ENABLED
 
 class WebServer:
     def __init__(self, host, port, race_controller):
@@ -34,39 +35,97 @@ class WebServer:
         print(f"Servidor web configurado en {self.host}:{self.port}")
         
     def handle_requests(self):
-        """Maneja las peticiones HTTP entrantes"""
+        """Maneja las peticiones HTTP entrantes de forma no bloqueante"""
         try:
-            # Sin timeout para aceptar conexiones
-            client_socket, address = self.server_socket.accept()
-            print(f"Petición de {address}")
+            # Configurar socket como no bloqueante para respuesta rápida
+            self.server_socket.setblocking(False)
             
-            # Configurar timeout para la lectura
-            client_socket.settimeout(2.0)
-            request = client_socket.recv(1024).decode('utf-8')
-            
-            if request:
-                response = self.process_request(request)
-                # Enviar respuesta inmediatamente
-                self.send_response(client_socket, response)
-            
-            client_socket.close()
-            
-        except OSError as e:
-            # No hay peticiones pendientes - esto es normal
-            if "timed out" not in str(e) and "110" not in str(e):
-                print(f"Error en handle_requests: {e}")
-            pass
+            # Intentar aceptar conexión sin bloquear
+            try:
+                client_socket, address = self.server_socket.accept()
+                print(f"🌐 Nueva conexión de {address}")
+                
+                # Configurar timeout muy corto para respuesta rápida
+                client_socket.settimeout(0.5)  # 500ms en lugar de 2s
+                print(f"⏱️ Timeout configurado: 0.5 segundos")
+                
+                request = client_socket.recv(1024).decode('utf-8')
+                print(f"📥 Datos recibidos: {len(request)} caracteres")
+                
+                if request:
+                    print(f"📋 Procesando petición...")
+                    response = self.process_request(request)
+                    print(f"📤 Enviando respuesta...")
+                    # Enviar respuesta inmediatamente
+                    self.send_response(client_socket, response)
+                    print(f"✅ Respuesta enviada")
+                else:
+                    print(f"⚠️ Petición vacía recibida")
+                
+                print(f"🔌 Cerrando conexión con {address}")
+                client_socket.close()
+                print(f"✅ Conexión cerrada")
+                
+            except OSError as e:
+                # No hay conexiones pendientes - esto es normal y esperado
+                if "11" in str(e) or "timed out" in str(e):
+                    # EAGAIN/EWOULDBLOCK - no hay conexiones pendientes
+                    pass
+                else:
+                    print(f"❌ Error aceptando conexión: {e}")
+                    
+        except Exception as e:
+            print(f"❌ Error en handle_requests: {e}")
+            print(f"   Tipo de error: {type(e).__name__}")
+            print(f"   Código de error: {getattr(e, 'errno', 'N/A')}")
             
     def send_response(self, client_socket, response):
         """Envía la respuesta HTTP de forma segura"""
         try:
+            print(f"📤 Enviando respuesta - Tipo: {type(response)}, Longitud: {len(response)}")
+            
             # Enviar en chunks si la respuesta es muy larga
             chunk_size = 1024
+            total_sent = 0
+            chunks_sent = 0
+            
             for i in range(0, len(response), chunk_size):
                 chunk = response[i:i + chunk_size]
-                client_socket.send(chunk.encode('utf-8'))
+                chunk_size_actual = len(chunk)
+                
+                try:
+                    # Si response es bytes, enviar directamente; si no, codificar
+                    if isinstance(response, bytes):
+                        bytes_sent = client_socket.send(chunk)
+                    else:
+                        # Si response no es bytes, chunk tampoco lo es, así que codificar
+                        bytes_sent = client_socket.send(chunk.encode('utf-8'))
+                    
+                    total_sent += bytes_sent
+                    chunks_sent += 1
+                    
+                    if chunks_sent % 10 == 0:  # Log cada 10 chunks para no saturar
+                        print(f"📦 Chunk {chunks_sent}: {bytes_sent}/{chunk_size_actual} bytes enviados")
+                        
+                except Exception as chunk_error:
+                    print(f"❌ Error enviando chunk {chunks_sent}: {chunk_error}")
+                    print(f"   Chunk size: {chunk_size_actual}, Bytes enviados hasta ahora: {total_sent}")
+                    raise chunk_error
+            
+            print(f"✅ Respuesta enviada exitosamente: {total_sent} bytes en {chunks_sent} chunks")
+            
         except Exception as e:
-            print(f"Error enviando respuesta: {e}")
+            print(f"❌ Error enviando respuesta: {e}")
+            print(f"   Tipo de error: {type(e).__name__}")
+            print(f"   Código de error: {getattr(e, 'errno', 'N/A')}")
+            print(f"   Mensaje: {str(e)}")
+            
+            # Intentar cerrar el socket de forma segura
+            try:
+                client_socket.close()
+                print("🔌 Socket cerrado después del error")
+            except:
+                print("⚠️ No se pudo cerrar el socket")
             
     def process_request(self, request):
         """Procesa la petición HTTP y retorna la respuesta"""
@@ -94,6 +153,12 @@ class WebServer:
             return self.api_lap_reset()
         elif path == "/api/lap/status":
             return self.api_lap_status()
+        elif path == "/api/race/start":
+            return self.api_race_start()
+        elif path == "/api/race/stop":
+            return self.api_race_stop()
+        elif path == "/api/race/status":
+            return self.api_race_status()
         elif path == "/api/led/on":
             return self.api_led_on()
         elif path == "/api/led/off":
@@ -116,10 +181,26 @@ class WebServer:
             return self.api_racer_display()
         elif path.startswith("/api/racer/scroll/speed"):
             return self.api_racer_scroll_speed(request)
+        elif path == "/api/traffic-light/previous":
+            return self.api_traffic_previous()
+        elif path == "/api/traffic-light/previous-stop":
+            return self.api_traffic_previous_stop()
+        elif path == "/api/traffic-light/start":
+            return self.api_traffic_start()
+        elif path == "/api/traffic-light/stop":
+            return self.api_traffic_stop()
+        elif path == "/api/traffic-light/status":
+            return self.api_traffic_status()
         elif path == "/style.css":
             return self.serve_css()
         elif path == "/script.js":
             return self.serve_js()
+        elif path.startswith("/sounds/"):
+            return self.serve_sound(path)
+        elif path == "/test-sound.html":
+            return self.serve_test_sound()
+        elif path == "/test-sound-fix.html":
+            return self.serve_test_sound_fix()
         else:
             return self.http_response("404 Not Found", "text/plain", "Not Found")
             
@@ -153,6 +234,71 @@ class WebServer:
         except Exception as e:
             print("Error al leer script.js:", e)
             return self.http_response("404 Not Found", "text/plain", "JS no encontrado")
+    
+    def serve_test_sound(self):
+        """Sirve el archivo de prueba de sonido"""
+        try:
+            with open("examples/test_browser_sound.html", "r", encoding="utf-8") as f:
+                html_content = f.read()
+            return self.http_response("200 OK", "text/html", html_content)
+        except Exception as e:
+            print("Error al leer test_browser_sound.html:", e)
+            return self.http_response("404 Not Found", "text/plain", "Archivo de prueba no encontrado")
+    
+    def serve_test_sound_fix(self):
+        """Sirve el archivo de prueba de sonido corregido"""
+        try:
+            with open("test_sound_fix.html", "r", encoding="utf-8") as f:
+                html_content = f.read()
+            return self.http_response("200 OK", "text/html", html_content)
+        except Exception as e:
+            print("Error al leer test_sound_fix.html:", e)
+            return self.http_response("404 Not Found", "text/plain", "Archivo de prueba corregido no encontrado")
+    
+    def serve_sound(self, path):
+        """Sirve archivos de sonido con el tipo MIME correcto según la extensión"""
+        try:
+            print(f"🎵 === SIRVIENDO ARCHIVO DE SONIDO ===")
+            print(f"📁 Path solicitado: {path}")
+            
+            # Extraer el nombre del archivo de sonido
+            sound_file = path.replace("/sounds/", "")
+            print(f"📄 Nombre del archivo: {sound_file}")
+            
+            # Construir la ruta completa del archivo
+            file_path = f"web/sounds/{sound_file}"
+            print(f"🗂️ Ruta completa: {file_path}")
+            
+            # Leer el archivo de sonido en modo binario
+            print(f"📖 Leyendo archivo...")
+            try:
+                with open(file_path, "rb") as f:
+                    sound_content = f.read()
+                print(f"✅ Archivo leído: {len(sound_content)} bytes")
+            except OSError as e:
+                print(f"❌ Error leyendo archivo: {e}")
+                return self.http_response("404 Not Found", "text/plain", "Archivo de sonido no encontrado")
+
+            # Determinar el tipo MIME según la extensión
+            ext = sound_file.lower().split('.')[-1]
+            if ext == "mp3":
+                content_type = "audio/mpeg"
+            elif ext == "wav":
+                content_type = "audio/wav"
+            else:
+                content_type = "application/octet-stream"  # Por defecto
+            print(f"🎵 Tipo MIME: {content_type} (extensión: .{ext})")
+            
+            print(f"📤 Preparando respuesta HTTP...")
+            response = self.http_response("200 OK", content_type, sound_content, is_binary=True)
+            print(f"✅ Respuesta preparada: {len(response)} bytes")
+            
+            return response
+        except Exception as e:
+            print(f"❌ Error al leer archivo de sonido {path}:")
+            print(f"   Tipo de error: {type(e).__name__}")
+            print(f"   Mensaje: {str(e)}")
+            return self.http_response("404 Not Found", "text/plain", "Archivo de sonido no encontrado")
         
         
     def api_lap_increment(self):
@@ -181,6 +327,35 @@ class WebServer:
         return self.json_response({
             "success": True,
             "race_status": status
+        })
+    
+    def api_race_start(self):
+        """API: Iniciar carrera"""
+        success = self.race_controller.start_race()
+        status = self.race_controller.get_race_status()
+        return self.json_response({
+            "success": success,
+            "message": "Carrera iniciada" if success else "Error al iniciar carrera",
+            "race_status": status
+        })
+    
+    def api_race_stop(self):
+        """API: Detener carrera"""
+        success = self.race_controller.stop_race()
+        status = self.race_controller.get_race_status()
+        return self.json_response({
+            "success": success,
+            "message": "Carrera detenida" if success else "Error al detener carrera",
+            "race_status": status
+        })
+    
+    def api_race_status(self):
+        """API: Obtener estado detallado de la carrera"""
+        status = self.race_controller.get_race_status()
+        return self.json_response({
+            "success": True,
+            "race_status": status,
+            "message": "Estado de la carrera obtenido"
         })
     
     def api_led_on(self):
@@ -318,17 +493,115 @@ class WebServer:
             "scroll_speed": current_speed,
             "message": "Velocidad de scroll obtenida"
         })
+    
+    # =============================================================================
+    # API DEL SEMÁFORO
+    # =============================================================================
+    
+    def api_traffic_previous(self):
+        """API: Iniciar previa (titileo)"""
+        success = self.race_controller.race_previous()
+        traffic_status = self.race_controller.get_traffic_light_status()
+        return self.json_response({
+            "success": success,
+            "message": "Previa iniciada" if success else "Error al iniciar previa",
+            "traffic_light_status": traffic_status
+        })
+    
+    def api_traffic_previous_stop(self):
+        """API: Terminar previa (titileo)"""
+        success = self.race_controller.race_previous_stop()
+        traffic_status = self.race_controller.get_traffic_light_status()
+        return self.json_response({
+            "success": success,
+            "message": "Previa terminada" if success else "Error al terminar previa",
+            "traffic_light_status": traffic_status
+        })
+    
+    def api_traffic_start(self):
+        """API: Iniciar carrera (secuencia de largada)"""
+        try:
+            # Si hay previa activa, terminarla automáticamente sin mensajes
+            if self.race_controller.traffic_light.current_state == TRAFFIC_LIGHT_STATE_BLINKING:
+                if DEBUG_ENABLED:
+                    print("[WEB] Previa activa detectada - terminando automáticamente")
+                self.race_controller.traffic_light.race_previous_stop()
+                # Esperar un momento para que se complete la terminación
+                time.sleep(0.1)
+            
+            # Verificar que la previa se terminó correctamente
+            if self.race_controller.traffic_light.current_state == TRAFFIC_LIGHT_STATE_BLINKING:
+                if DEBUG_ENABLED:
+                    print("[WEB] Previa aún activa, intentando terminar nuevamente")
+                self.race_controller.traffic_light.race_previous_stop()
+                time.sleep(0.1)
+            
+            success = self.race_controller.race_start()
+            traffic_status = self.race_controller.get_traffic_light_status()
+            race_status = self.race_controller.get_race_status()
+            
+            return self.json_response({
+                "success": success,
+                "message": "Carrera iniciada" if success else "Error al iniciar carrera",
+                "traffic_light_status": traffic_status,
+                "race_status": race_status
+            })
+        except Exception as e:
+            if DEBUG_ENABLED:
+                print(f"[WEB] Error en api_traffic_start: {e}")
+            return self.json_response({
+                "success": False,
+                "message": f"Error al iniciar carrera: {str(e)}",
+                "traffic_light_status": self.race_controller.get_traffic_light_status(),
+                "race_status": self.race_controller.get_race_status()
+            })
+    
+    def api_traffic_stop(self):
+        """API: Parar carrera (apagar semáforos)"""
+        success = self.race_controller.race_stop()
+        traffic_status = self.race_controller.get_traffic_light_status()
+        race_status = self.race_controller.get_race_status()
+        
+        return self.json_response({
+            "success": success,
+            "message": "Carrera parada" if success else "Error al parar carrera",
+            "traffic_light_status": traffic_status,
+            "race_status": race_status
+        })
+    
+    def api_traffic_status(self):
+        """API: Obtener estado del semáforo"""
+        traffic_status = self.race_controller.get_traffic_light_status()
+        race_status = self.race_controller.get_race_status()
+        
+        return self.json_response({
+            "success": True,
+            "traffic_light_status": traffic_status,
+            "race_status": race_status,
+            "message": "Estado del semáforo obtenido"
+        })
         
     def json_response(self, data):
         """Retorna una respuesta JSON"""
         return self.http_response("200 OK", "application/json", json.dumps(data))
         
-    def http_response(self, status, content_type, content):
+    def http_response(self, status, content_type, content, is_binary=False):
         """Retorna una respuesta HTTP completa con formato correcto"""
         response = "HTTP/1.1 {}\r\n".format(status)
-        response += "Content-Type: {}; charset=utf-8\r\n".format(content_type)
-        response += "Content-Length: {}\r\n".format(len(content.encode('utf-8')))
+        response += "Content-Type: {}\r\n".format(content_type)
+        
+        if is_binary:
+            response += "Content-Length: {}\r\n".format(len(content))
+        else:
+            response += "Content-Length: {}\r\n".format(len(content.encode('utf-8')))
+            
         response += "Connection: close\r\n"
         response += "\r\n"  # Doble salto de línea obligatorio
-        response += content
-        return response 
+        
+        if is_binary:
+            # Para archivos binarios, codificar la respuesta como bytes
+            response_bytes = response.encode('utf-8') + content
+            return response_bytes
+        else:
+            response += content
+            return response 

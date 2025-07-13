@@ -1,74 +1,76 @@
 """
-Prueba del Sistema Completo de Contador de Vueltas
-Incluye display configurable, animaciones y lógica de carrera
+Ejemplo para probar el sistema completo con semáforo integrado
 """
 
-from race_controller import RaceController
 import time
+from machine import Pin
+from src.race_controller import RaceController
+from src.web_server import WebServer
+import network
+import gc
 
-def main():
-    print("=== PRUEBA DEL SISTEMA COMPLETO ===")
-    print("Contador de vueltas con display configurable")
-    print("=" * 50)
+def test_complete_system():
+    """Prueba el sistema completo con semáforo"""
+    print("=== SISTEMA COMPLETO CON SEMÁFORO ===")
+    print("Iniciando controlador de carrera...")
     
-    # Inicializar controlador de carrera
-    race = RaceController(max_laps=15)
-    
-    print("1. Estado inicial")
-    status = race.get_race_status()
-    print(f"   Vueltas: {status['current_laps']}/{status['max_laps']}")
-    print(f"   Completada: {status['is_completed']}")
-    
-    # Prueba 1: Incrementar vueltas
-    print("\n2. Incrementando vueltas...")
-    for i in range(5):
-        race.increment_lap()
-        status = race.get_race_status()
-        print(f"   Vuelta {status['current_laps']}/{status['max_laps']}")
-        time.sleep(0.5)
-    
-    # Prueba 2: Control de LED
-    print("\n3. Probando control de LED...")
-    print("   Encendiendo LED...")
-    race.turn_on_led()
-    time.sleep(1)
-    
-    print("   Apagando LED...")
-    race.turn_off_led()
-    time.sleep(1)
-    
-    print("   Alternando LED...")
-    race.toggle_led()
-    time.sleep(1)
-    
-    # Prueba 3: Configuración del display
-    print("\n4. Probando configuración del display...")
-    print("   Cambiando brillo...")
-    for brightness in [5, 10, 15]:
-        race.set_brightness(brightness)
-        print(f"      Brillo: {brightness}")
-        time.sleep(1)
-    
-    # Prueba 4: Completar carrera
-    print("\n5. Completando carrera...")
-    for i in range(10):
-        race.increment_lap()
-        status = race.get_race_status()
-        print(f"   Vuelta {status['current_laps']}/{status['max_laps']}")
-        time.sleep(0.3)
-    
-    # La carrera debería completarse y mostrar animación
-    print("\n6. Carrera completada - mostrando animación de bandera")
-    time.sleep(2)
-    
-    # Prueba 5: Reiniciar
-    print("\n7. Reiniciando carrera...")
-    race.reset_race()
-    status = race.get_race_status()
-    print(f"   Vueltas: {status['current_laps']}/{status['max_laps']}")
-    
-    print("\n=== PRUEBA COMPLETADA ===")
-    print("Sistema funcionando correctamente!")
+    try:
+        # Crear controlador de carrera
+        race_controller = RaceController()
+        
+        # Crear servidor web
+        web_server = WebServer("0.0.0.0", 8080, race_controller)
+        
+        print("✓ Sistema iniciado correctamente")
+        print("✓ Servidor web en puerto 8080")
+        print("✓ Semáforo integrado")
+        print()
+        
+        # Probar funciones del semáforo
+        print("--- PRUEBA DEL SEMÁFORO ---")
+        
+        print("1. Iniciando previa (titileo)...")
+        success = race_controller.race_previous()
+        print(f"   Resultado: {'✓' if success else '✗'}")
+        time.sleep(3)
+        
+        print("2. Parando previa...")
+        success = race_controller.race_previous_stop()
+        print(f"   Resultado: {'✓' if success else '✗'}")
+        time.sleep(2)
+        
+        print("3. Largando carrera...")
+        success = race_controller.race_start()
+        print(f"   Resultado: {'✓' if success else '✗'}")
+        time.sleep(8)  # Esperar a que termine la secuencia
+        
+        print("4. Parando carrera...")
+        success = race_controller.race_stop()
+        print(f"   Resultado: {'✓' if success else '✗'}")
+        
+        print("\n--- ESTADO DEL SEMÁFORO ---")
+        status = race_controller.get_traffic_light_status()
+        print(f"Estado: {status['state']}")
+        print(f"Rojo: {'ON' if status['red_on'] else 'OFF'}")
+        print(f"Amarillo: {'ON' if status['yellow_on'] else 'OFF'}")
+        print(f"Verde: {'ON' if status['green_on'] else 'OFF'}")
+        print(f"Titileando: {'SÍ' if status['blinking_active'] else 'NO'}")
+        
+        print("\n=== SISTEMA LISTO ===")
+        print("Accede a la interfaz web desde tu navegador:")
+        print("http://[IP_DEL_PICO]:8080")
+        print()
+        print("Funciones disponibles en la web:")
+        print("- Contador de vueltas")
+        print("- Control del piloto")
+        print("- 🚦 Control del semáforo:")
+        print("  • Iniciar Previa (titileo)")
+        print("  • Parar Previa")
+        print("  • Largar Carrera (secuencia)")
+        print("  • Parar Carrera")
+        
+    except Exception as e:
+        print(f"Error iniciando sistema: {e}")
 
 if __name__ == "__main__":
-    main() 
+    test_complete_system() 

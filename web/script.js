@@ -1,4 +1,4 @@
-// JavaScript para el Controlador de Carrera
+// JavaScript para el Controlador de Carrera - Diseño de Cards
 let raceStatus = {
     current_laps: 0,
     max_laps: 15,
@@ -9,6 +9,15 @@ let raceStatus = {
 let ledStatus = false;
 let connectionStatus = 'connecting';
 
+// Variable para el estado del semáforo
+let trafficLightStatus = {
+    state: 'off',
+    red_on: false,
+    yellow_on: false,
+    green_on: false,
+    blinking_active: false
+};
+
 // Función para actualizar la interfaz
 function updateUI() {
     const currentLapElement = document.getElementById('currentLap');
@@ -16,6 +25,11 @@ function updateUI() {
     const progressFillElement = document.getElementById('progressFill');
     const raceStatusElement = document.getElementById('raceStatus');
     const connectionStatusElement = document.getElementById('connectionStatus');
+    const ledIndicatorElement = document.getElementById('ledIndicator');
+    const ledStatusElement = document.getElementById('ledStatus');
+    const raceStateElement = document.getElementById('raceState');
+    const lapCountElement = document.getElementById('lapCount');
+    const raceInitStatusElement = document.getElementById('raceInitStatus');
     
     // Actualizar contador de vueltas
     currentLapElement.textContent = raceStatus.current_laps;
@@ -34,6 +48,44 @@ function updateUI() {
     } else {
         raceStatusElement.textContent = `Vuelta ${raceStatus.current_laps} de ${raceStatus.max_laps}`;
         raceStatusElement.style.color = '#333';
+    }
+    
+    // Actualizar LED indicator
+    if (ledIndicatorElement) {
+        if (ledStatus) {
+            ledIndicatorElement.classList.add('on');
+            ledStatusElement.textContent = 'Encendido';
+        } else {
+            ledIndicatorElement.classList.remove('on');
+            ledStatusElement.textContent = 'Apagado';
+        }
+    }
+    
+    // Actualizar estado de la carrera (nuevo) - SINCRONIZACIÓN REALTIME
+    if (raceStateElement) {
+        if (raceStatus.is_race_started) {
+            raceStateElement.textContent = 'Iniciada';
+            raceStateElement.style.color = '#28a745';
+        } else {
+            raceStateElement.textContent = 'No Iniciada';
+            raceStateElement.style.color = '#dc3545';
+        }
+    }
+    
+    // Actualizar contador de vueltas (nuevo) - SINCRONIZACIÓN REALTIME
+    if (lapCountElement) {
+        lapCountElement.textContent = raceStatus.current_laps;
+    }
+    
+    // Actualizar estado de inicialización de carrera (nuevo) - SINCRONIZACIÓN REALTIME
+    if (raceInitStatusElement) {
+        if (raceStatus.is_race_started) {
+            raceInitStatusElement.textContent = 'Iniciada';
+            raceInitStatusElement.style.color = '#28a745';
+        } else {
+            raceInitStatusElement.textContent = 'No Iniciada';
+            raceInitStatusElement.style.color = '#dc3545';
+        }
     }
     
     // Actualizar estado de conexión
@@ -137,7 +189,7 @@ async function resetRace() {
     
     if (button) {
         button.disabled = false;
-        button.innerHTML = '<span class="icon">🔄</span>Reiniciar Carrera';
+        button.innerHTML = '<span class="icon">🔄</span>Reiniciar';
     }
 }
 
@@ -167,7 +219,7 @@ async function turnOnLED() {
     await apiCall('/api/led/on');
     if (button) {
         button.disabled = false;
-        button.innerHTML = '<span class="icon">🔴</span>Encender LED';
+        button.innerHTML = '<span class="icon">🔴</span>Encender';
     }
 }
 
@@ -181,7 +233,7 @@ async function turnOffLED() {
     await apiCall('/api/led/off');
     if (button) {
         button.disabled = false;
-        button.innerHTML = '<span class="icon">⚪</span>Apagar LED';
+        button.innerHTML = '<span class="icon">⚪</span>Apagar';
     }
 }
 
@@ -201,6 +253,22 @@ async function getStatus() {
         console.error('Error obteniendo estado:', error);
         connectionStatus = 'disconnected';
         updateUI();
+    }
+}
+
+// Función para actualizar estado (nueva función para el botón de actualizar)
+async function refreshStatus() {
+    const button = event.target.closest('.btn');
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<span class="icon">⏳</span>Actualizando...';
+    }
+    
+    await getStatus();
+    
+    if (button) {
+        button.disabled = false;
+        button.innerHTML = '<span class="icon">🔄</span>Actualizar';
     }
 }
 
@@ -241,29 +309,38 @@ function showNotification(message, type = 'info') {
         color: white;
         font-weight: bold;
         z-index: 1000;
-        animation: slideIn 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
     `;
     
     // Colores según tipo
     switch(type) {
         case 'success':
-            notification.style.backgroundColor = '#4CAF50';
+            notification.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
             break;
         case 'error':
-            notification.style.backgroundColor = '#f44336';
+            notification.style.background = 'linear-gradient(135deg, #dc3545, #e83e8c)';
             break;
         case 'warning':
-            notification.style.backgroundColor = '#ff9800';
+            notification.style.background = 'linear-gradient(135deg, #ffc107, #fd7e14)';
+            notification.style.color = '#333';
             break;
         default:
-            notification.style.backgroundColor = '#2196F3';
+            notification.style.background = 'linear-gradient(135deg, #17a2b8, #20c997)';
     }
     
+    // Agregar al DOM
     document.body.appendChild(notification);
+    
+    // Animar entrada
+    setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+    }, 100);
     
     // Remover después de 3 segundos
     setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
+        notification.style.transform = 'translateX(100%)';
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.parentNode.removeChild(notification);
@@ -272,20 +349,254 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// Agregar estilos CSS para animaciones
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
+// =============================================================================
+// FUNCIONES DEL SEMÁFORO OPTIMIZADAS PARA SINCRONIZACIÓN ULTRA-RÁPIDA
+// =============================================================================
+
+// Función para actualizar la UI del semáforo con sincronización ultra-rápida
+function updateTrafficLightUI() {
+    const trafficLightStatusElement = document.getElementById('trafficLightStatus');
+    const trafficLightsStateElement = document.getElementById('trafficLightsState');
+    
+    // Actualizar estado general del semáforo
+    if (trafficLightStatusElement) {
+        trafficLightStatusElement.textContent = trafficLightStatus.state;
+        trafficLightStatusElement.className = `status-value ${trafficLightStatus.state}`;
     }
     
-    @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
+    // Actualizar estado detallado de las luces
+    if (trafficLightsStateElement) {
+        const redState = trafficLightStatus.red_on ? 'ON' : 'OFF';
+        const yellowState = trafficLightStatus.yellow_on ? 'ON' : 'OFF';
+        const greenState = trafficLightStatus.green_on ? 'ON' : 'OFF';
+        
+        trafficLightsStateElement.textContent = `Roja: ${redState} | Amarilla: ${yellowState} | Verde: ${greenState}`;
     }
-`;
-document.head.appendChild(style);
+    
+    // Actualizar todos los semáforos (4 semáforos) - ULTRA-RÁPIDO
+    updateAllTrafficLights();
+}
+
+// Función para actualizar todos los semáforos - OPTIMIZADA PARA VELOCIDAD
+function updateAllTrafficLights() {
+    const lightIds = ['1', '2', '3', '4'];
+    
+    lightIds.forEach(id => {
+        // Actualizar luz roja
+        const redLight = document.getElementById(`redLight${id}`);
+        if (redLight) {
+            if (trafficLightStatus.red_on) {
+                redLight.classList.add('on');
+            } else {
+                redLight.classList.remove('on');
+            }
+        }
+        
+        // Actualizar luz amarilla
+        const yellowLight = document.getElementById(`yellowLight${id}`);
+        if (yellowLight) {
+            if (trafficLightStatus.yellow_on) {
+                yellowLight.classList.add('on');
+            } else {
+                yellowLight.classList.remove('on');
+            }
+        }
+        
+        // Actualizar luz verde - CRÍTICO PARA INICIO DE CARRERA
+        const greenLight = document.getElementById(`greenLight${id}`);
+        if (greenLight) {
+            if (trafficLightStatus.green_on) {
+                greenLight.classList.add('on');
+            } else {
+                greenLight.classList.remove('on');
+            }
+        }
+    });
+}
+
+// Función para iniciar previa
+async function startRacePrevious() {
+    const button = event.target.closest('.btn');
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<span class="icon">⏳</span>Iniciando...';
+    }
+    
+    try {
+        console.log('⚠️ Iniciando previa...');
+        
+        const response = await fetch('/api/traffic-light/previous');
+        const data = await response.json();
+        
+        if (data.success) {
+            console.log('✅ Previa iniciada correctamente');
+            console.log('   Estado del semáforo:', data.traffic_light_status.state);
+            
+            showNotification('Previa iniciada', 'success');
+            
+            // Actualizar estado inmediatamente
+            if (data.traffic_light_status) {
+                trafficLightStatus = data.traffic_light_status;
+                updateTrafficLightUI();
+            }
+            
+            // Mostrar botón de terminar previa
+            const stopPreviousBtn = document.getElementById('stopPreviousBtn');
+            if (stopPreviousBtn) {
+                stopPreviousBtn.style.display = 'inline-flex';
+            }
+        } else {
+            console.error('❌ Error iniciando previa:', data.message);
+            showNotification(data.message, 'warning');
+        }
+    } catch (error) {
+        console.error('❌ Error de conexión:', error);
+        showNotification('Error al iniciar previa', 'error');
+    }
+    
+    if (button) {
+        button.disabled = false;
+        button.innerHTML = '<span class="icon">⚠️</span>Iniciar Previa';
+    }
+}
+
+// Función para terminar previa (nueva)
+async function stopRacePrevious() {
+    const button = event.target.closest('.btn');
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<span class="icon">⏳</span>Terminando...';
+    }
+    
+    try {
+        const response = await fetch('/api/traffic-light/previous-stop');
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Previa terminada', 'success');
+            // Ocultar botón de terminar previa
+            const stopPreviousBtn = document.getElementById('stopPreviousBtn');
+            if (stopPreviousBtn) {
+                stopPreviousBtn.style.display = 'none';
+            }
+        } else {
+            showNotification(data.message, 'warning');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error al terminar previa', 'error');
+    }
+    
+    if (button) {
+        button.disabled = false;
+        button.innerHTML = '<span class="icon">⏹️</span>Terminar Previa';
+    }
+}
+
+// Función para iniciar carrera
+async function startRace() {
+    const button = event.target.closest('.btn');
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<span class="icon">⏳</span>Iniciando...';
+    }
+    
+    try {
+        console.log('🚦 Iniciando carrera...');
+        
+        const response = await fetch('/api/traffic-light/start');
+        const data = await response.json();
+        
+        if (data.success) {
+            console.log('✅ Carrera iniciada correctamente');
+            console.log('   Estado del semáforo:', data.traffic_light_status.state);
+            console.log('   Estado de la carrera:', data.race_status.is_race_started);
+            
+            showNotification('Carrera iniciada', 'success');
+            
+            // Actualizar estado inmediatamente
+            if (data.traffic_light_status) {
+                trafficLightStatus = data.traffic_light_status;
+                updateTrafficLightUI();
+            }
+            
+            if (data.race_status) {
+                raceStatus = data.race_status;
+                updateUI();
+            }
+        } else {
+            console.error('❌ Error iniciando carrera:', data.message);
+            showNotification(data.message, 'warning');
+        }
+    } catch (error) {
+        console.error('❌ Error de conexión:', error);
+        showNotification('Error al iniciar carrera', 'error');
+    }
+    
+    if (button) {
+        button.disabled = false;
+        button.innerHTML = '<span class="icon">🏁</span>Largar';
+    }
+}
+
+// Función para parar carrera
+async function stopRace() {
+    const button = event.target.closest('.btn');
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<span class="icon">⏳</span>Parando...';
+    }
+    
+    try {
+        const response = await fetch('/api/traffic-light/stop');
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Carrera parada', 'success');
+        } else {
+            showNotification(data.message, 'warning');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error al parar carrera', 'error');
+    }
+    
+    if (button) {
+        button.disabled = false;
+        button.innerHTML = '<span class="icon">🛑</span>Parar';
+    }
+}
+
+// Función para obtener estado del semáforo - OPTIMIZADA PARA VELOCIDAD
+async function getTrafficLightStatus() {
+    try {
+        const response = await fetch('/api/traffic-light/status');
+        const data = await response.json();
+        
+        if (data.success) {
+            // Solo actualizar si el estado realmente cambió para optimizar rendimiento
+            const oldState = JSON.stringify(trafficLightStatus);
+            trafficLightStatus = data.traffic_light_status;
+            const newState = JSON.stringify(trafficLightStatus);
+            
+            if (oldState !== newState) {
+                updateTrafficLightUI();
+                console.log('🔄 Estado del semáforo actualizado:', trafficLightStatus.state);
+            }
+        }
+    } catch (error) {
+        console.error('Error obteniendo estado del semáforo:', error);
+    }
+}
+
+// Función para sincronización ultra-rápida del semáforo visual
+function syncTrafficLightVisual() {
+    updateTrafficLightUI();
+}
+
+// =============================================================================
+// FUNCIONES DEL PILOTO
+// =============================================================================
 
 // Función para obtener nombre del piloto
 async function getRacerName() {
@@ -304,7 +615,8 @@ async function getRacerName() {
 
 // Función para establecer nombre del piloto
 async function setRacerName() {
-    const racerName = document.getElementById('racerName').value.trim().toUpperCase();
+    const racerNameInput = document.getElementById('racerName');
+    const racerName = racerNameInput.value.trim();
     
     if (!racerName) {
         showNotification('Por favor ingresa un nombre', 'warning');
@@ -318,25 +630,23 @@ async function setRacerName() {
     }
     
     try {
-        // Llamar a la API para cambiar el nombre del piloto
         const response = await fetch(`/api/racer/name/set?name=${encodeURIComponent(racerName)}`);
         const data = await response.json();
         
         if (data.success) {
-            document.getElementById('currentRacerName').textContent = data.racer_name;
-            document.getElementById('racerName').value = racerName; // Mantener mayúsculas en el campo
-            showNotification('Nombre del piloto actualizado y mostrado en display', 'success');
+            document.getElementById('currentRacerName').textContent = racerName;
+            showNotification('Nombre guardado', 'success');
         } else {
-            showNotification(data.message || 'Error al actualizar nombre', 'error');
+            showNotification(data.message, 'warning');
         }
     } catch (error) {
         console.error('Error:', error);
-        showNotification('Error al actualizar nombre', 'error');
+        showNotification('Error al guardar nombre', 'error');
     }
     
     if (button) {
         button.disabled = false;
-        button.innerHTML = '<span class="icon">💾</span>Guardar Nombre';
+        button.innerHTML = '<span class="icon">💾</span>Guardar';
     }
 }
 
@@ -354,6 +664,8 @@ async function displayRacerName() {
         
         if (data.success) {
             showNotification('Nombre mostrado en display', 'success');
+        } else {
+            showNotification(data.message, 'warning');
         }
     } catch (error) {
         console.error('Error:', error);
@@ -362,53 +674,46 @@ async function displayRacerName() {
     
     if (button) {
         button.disabled = false;
-        button.innerHTML = '<span class="icon">📺</span>Mostrar en Display';
+        button.innerHTML = '<span class="icon">📺</span>Mostrar';
     }
 }
 
-// Función para convertir a mayúsculas mientras se escribe
+// Función para convertir a mayúsculas
 function convertToUpperCase(input) {
     input.value = input.value.toUpperCase();
 }
 
-// Inicializar la página
-document.addEventListener('DOMContentLoaded', function() {
-    updateDeviceIP();
-    
-    // Obtener estado inicial
-    getStatus();
-    
-    // Obtener nombre del piloto
-    getRacerName();
-    
-    // Configurar conversión automática a mayúsculas
-    const racerNameInput = document.getElementById('racerName');
-    if (racerNameInput) {
-        racerNameInput.addEventListener('input', function() {
-            convertToUpperCase(this);
-        });
-    }
-    
-    // Verificar conectividad cada 10 segundos
-    setInterval(checkConnectivity, 10000);
-    
-    // Actualizar estado cada 5 segundos
-    setInterval(getStatus, 5000);
-    
-    // Mostrar notificación de bienvenida
-    setTimeout(() => {
-        showNotification('Controlador LED iniciado correctamente', 'success');
-    }, 1000);
-});
+// =============================================================================
+// INICIALIZACIÓN Y ACTUALIZACIÓN CONTINUA OPTIMIZADA
+// =============================================================================
 
-// Manejar errores de red
-window.addEventListener('online', function() {
-    showNotification('Conexión restaurada', 'success');
-    checkConnectivity();
-});
-
-window.addEventListener('offline', function() {
-    showNotification('Conexión perdida', 'error');
-    connectionStatus = 'disconnected';
+// Función para actualizar datos en tiempo real - OPTIMIZADA
+async function updateRealtimeData() {
+    await getStatus();
+    await getTrafficLightStatus();
     updateUI();
-}); 
+}
+
+// Función de inicialización - OPTIMIZADA PARA SINCRONIZACIÓN ULTRA-RÁPIDA
+async function initializeApp() {
+    updateDeviceIP();
+    await updateRealtimeData();
+    
+    // ACTUALIZACIÓN ULTRA-RÁPIDA: 0.3 segundos para sincronización perfecta
+    setInterval(updateRealtimeData, 300);
+    
+    // Sincronización ultra-rápida del semáforo cada 100ms para máxima precisión
+    setInterval(getTrafficLightStatus, 100);
+    
+    // Sincronización visual ultra-rápida cada 50ms para el verde crítico
+    setInterval(syncTrafficLightVisual, 50);
+    
+    // Verificar conectividad cada 5 segundos
+    setInterval(checkConnectivity, 5000);
+    
+    console.log('🚀 Aplicación inicializada con sincronización ultra-rápida');
+    console.log('⚡ Semáforos: 100ms | Visual: 50ms | General: 300ms');
+}
+
+// Inicializar cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', initializeApp); 

@@ -1,12 +1,13 @@
 # Controlador LED y Contador de Vueltas - Raspberry Pi Pico 2W
 
-Este proyecto permite controlar un LED y un contador de vueltas con display doble MAX7219 (8x16 LEDs) en la Raspberry Pi Pico 2W, todo mediante una interfaz web moderna.
+Este proyecto permite controlar un LED, un contador de vueltas con display doble MAX7219 (8x16 LEDs) y un semáforo para la largada de carreras en la Raspberry Pi Pico 2W, todo mediante una interfaz web moderna.
 
 ## 🚀 Características
 
 - Control de LED mediante interfaz web
 - Contador de vueltas de carrera con animaciones
 - Display MAX7219 flexible (8x8 o 16x8 LEDs, doble módulo en cascada)
+- **Sistema de semáforo para largada de carreras**
 - Animación de bandera a cuadros alternante (siempre visible)
 - Animaciones configurables desde la web
 - Servidor web integrado en MicroPython
@@ -62,6 +63,7 @@ Este proyecto permite controlar un LED y un contador de vueltas con display dobl
 - `examples/test_racer_name_web_fixed.py` - Prueba el nombre del piloto desde la web (versión corregida)
 - `examples/test_helmet_scroll_fixed.py` - Prueba el scroll con casco real y velocidad configurable
 - `examples/test_long_names_scroll.py` - Prueba nombres largos con scroll mejorado
+- `examples/test_traffic_light.py` - Prueba el sistema de semáforo para largada de carreras
 
 ## 📋 API HTTP REST
 
@@ -87,46 +89,14 @@ Este proyecto permite controlar un LED y un contador de vueltas con display dobl
 - `GET /api/racer/name` - Obtiene el nombre del piloto
 - `GET /api/racer/display` - Muestra el nombre del piloto en el display
 
+#### Semáforo
+- `GET /api/traffic/previous` - Inicia el titileo de todas las luces del semáforo
+- `GET /api/traffic/previous/stop` - Detiene el titileo de todas las luces del semáforo
+- `GET /api/traffic/start` - Inicia la secuencia de largada (Roja -> Amarilla -> Verde)
+- `GET /api/traffic/stop` - Apaga las luces verdes del semáforo
+- `GET /api/traffic/status` - Obtiene el estado actual del semáforo
+
 #### Web
 - `/` - Interfaz web principal
 - `/style.css` - Estilos CSS
 - `/script.js` - JavaScript del frontend
-
-## 🛠️ Instalación y uso
-
-1. **Clonar el repositorio**
-   ```bash
-   git clone <tu-repositorio>
-   cd lap_count_scx
-   ```
-2. **Conectar el hardware** (ver docs y esquemas)
-3. **Subir código a la Pico** (ver guía en docs/setup.md)
-4. **Ejecutar**
-   - Ejecuta `main.py` en la Pico usando Thonny IDE
-   - Accede a la interfaz web en `http://<ip-pico>:8080`
-
-## 📚 Documentación
-
-- [Guía de Configuración](docs/setup.md)
-- [Documentación de la API](docs/api.md)
-- [Configuración de Módulos MAX7219 en Cascada](docs/max7219_cascade_setup.md)
-- [Configuración Flexible del Display](docs/flexible_display_config.md)
-- [Configuración de Rotación del Display](docs/display_rotation_config.md)
-- [Scroll de Texto](docs/scroll_explanation.md)
-- [Generación de Letras](docs/letter_generation_explanation.md)
-
-## 🤝 Contribuir
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
-
-## 🆘 Soporte
-
-Si tienes problemas o preguntas, abre un issue en el repositorio. 
