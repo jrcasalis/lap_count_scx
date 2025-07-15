@@ -26,7 +26,7 @@ MAX7219_CLK_PIN = 2      # Reloj (SCK)
 MAX7219_NUM_MODULES = 2  # Número de módulos en cascada
 MAX7219_BRIGHTNESS = 8    # Brillo (0-15)
 MAX7219_ROTATION = 90     # Rotación (0, 90, 180, 270)
-MAX7219_ORIENTATION = "horizontal"  # "horizontal" o "vertical"
+MAX7219_ORIENTATION = "vertical"  # "horizontal" o "vertical"
 
 # =============================================================================
 # CONFIGURACIÓN DE LA CARRERA
@@ -54,12 +54,6 @@ ANIMATION_TYPES = {
 
 # Animación por defecto al completar carrera
 DEFAULT_COMPLETION_ANIMATION = "checkered_flag"
-
-# =============================================================================
-# CONFIGURACIÓN DEL SERVIDOR WEB
-# =============================================================================
-WEB_UPDATE_INTERVAL = 1000  # Intervalo de actualización en ms
-WEB_ENABLE_NOTIFICATIONS = True  # Habilitar notificaciones
 
 # =============================================================================
 # CONFIGURACIÓN DE SENSORES
@@ -105,5 +99,50 @@ RACER_NAME_SCROLL_SPEED = 0.15  # Velocidad del scroll del nombre (segundos) - M
 # =============================================================================
 # CONFIGURACIÓN DE DEBUG
 # =============================================================================
-DEBUG_ENABLED = True      # Habilitar mensajes de debug
-DEBUG_LEVEL = "INFO"      # Nivel de debug: "DEBUG", "INFO", "WARNING", "ERROR" 
+DEBUG_ENABLED = False      # Habilitar mensajes de debug
+DEBUG_LEVEL = "INFO"      # Nivel de debug: "DEBUG", "INFO", "WARNING", "ERROR"
+
+# =============================================================================
+# CONFIGURACIÓN DEL SERVIDOR WEB
+# =============================================================================
+# Configuración del servidor web
+WEB_SERVER_PORT = 80  # Puerto estándar HTTP
+WEB_SERVER_HOST = "0.0.0.0"  # Escuchar en todas las interfaces
+WEB_SERVER_TIMEOUT = 0.1  # Timeout no bloqueante en segundos
+WEB_SERVER_MAX_CONNECTIONS = 5  # Máximo número de conexiones simultáneas
+
+# Configuración de actualización
+WEB_UPDATE_INTERVAL = 0.1  # Intervalo de polling del titileo (100ms)
+WEB_STATUS_UPDATE_INTERVAL = 2.0  # Intervalo de actualización de estado en la web (2s)
+
+# Configuración de memoria
+WEB_GC_INTERVAL = 100  # Ejecutar garbage collector cada 100 iteraciones
+WEB_MAX_REQUEST_SIZE = 1024  # Tamaño máximo de solicitud HTTP
+
+# Configuración de CORS
+WEB_ENABLE_CORS = True
+WEB_CORS_ORIGIN = "*"
+WEB_CORS_METHODS = "GET, POST, OPTIONS"
+WEB_CORS_HEADERS = "Content-Type"
+
+# Configuración de debug del servidor web
+WEB_DEBUG_ENABLED = False
+WEB_LOG_REQUESTS = True
+WEB_LOG_ERRORS = True
+
+# Configuración de seguridad
+WEB_MAX_REQUEST_TIME = 30  # Tiempo máximo de procesamiento de solicitud (segundos)
+WEB_RATE_LIMIT_ENABLED = False  # Habilitar limitación de tasa (no implementado aún)
+
+# Configuración de la interfaz web
+WEB_TITLE = "🏁 Controlador de Carrera"
+WEB_DESCRIPTION = "Control remoto de carrera para pista Scalextric"
+WEB_VERSION = "0.0.1"
+
+# Configuración de notificaciones
+WEB_ENABLE_NOTIFICATIONS = True
+WEB_NOTIFICATION_DURATION = 3000  # Duración de notificaciones en ms
+
+# Configuración de WebSockets (para futuras implementaciones)
+WEB_WEBSOCKET_ENABLED = False
+WEB_WEBSOCKET_PORT = 8080 

@@ -1,514 +1,366 @@
 """
-Controlador de Carrera - Maneja la lógica del contador de vueltas
-Integra el display MAX7219 configurable y animaciones
+Controlador de Carrera - Refactorizado para soportar múltiples corredores
 """
 
-import time
-from machine import Pin
-from max7219_dual_display_configurable import MAX7219DualDisplayConfigurable
 from traffic_light_controller import TrafficLightController
-from config import *
-from patterns.animations import get_animation_patterns
+from max7219_dual_display_configurable import MAX7219DualDisplayConfigurable
+from config import TRAFFIC_LIGHT_STATE_BLINKING, TRAFFIC_LIGHT_STATE_GREEN, DEBUG_ENABLED
+from patterns.various import FULL_CIRCLE
+from patterns.animations import CHECKERED_FLAG_PATTERNS
+import time
 
 class RaceController:
-    def __init__(self, max_laps=RACE_MAX_LAPS):
-        """Inicializa el controlador de carrera"""
-        self.max_laps = max_laps
-        self.current_laps = 0
-        self.is_completed = False
-        self.is_race_started = False  # Nuevo estado: carrera iniciada
-        self.last_sensor_time = 0
-        
-        # Inicializar nombre del piloto
-        self.racer_name = RACER_NAME
-        
-        # Inicializar LED
-        self.led = Pin(LED_PIN_RED, Pin.OUT)
-        self.led.off()
-        
-        # Inicializar semáforo con referencia al controlador de carrera
-        self.traffic_light = TrafficLightController(self)
-        
-        # Inicializar display configurable
-        self.display = MAX7219DualDisplayConfigurable(
-            din_pin=MAX7219_DIN_PIN,
-            cs_pin=MAX7219_CS_PIN,
-            clk_pin=MAX7219_CLK_PIN,
-            num_modules=MAX7219_NUM_MODULES,
-            brightness=MAX7219_BRIGHTNESS,
-            rotation=MAX7219_ROTATION,
-            orientation=MAX7219_ORIENTATION
-        )
-        
-        # Mostrar estado inicial
-        self.update_display()
-        
+    # Variables globales al controlador (de clase)
+    max_laps = 15
+    num_racers = 2
+    racer_names = ["Piloto 1", "Piloto 2"]
+    current_laps = [0, 0]
+    traffic_light = None
+    display = None
+    race_state = "STOPPED"  # STOPPED | PREVIOUS | STARTED | FINISHED
+    stopped_blink_enabled = True  # Controla si el patrón titila en estado STOPPED
+
+    def __init__(self, max_laps=15, num_racers=2, racer_names=None):
+        """
+        Inicializa el controlador de carrera con parámetros básicos.
+        max_laps: cantidad de vueltas para finalizar la carrera
+        num_racers: cantidad de corredores
+        racer_names: lista de nombres de los corredores
+        """
         if DEBUG_ENABLED:
-            print(f"[RACE] Controlador inicializado - Máximo: {max_laps} vueltas")
-            print(f"[RACE] Piloto: {self.racer_name}")
-            print(f"[RACE] Estado inicial: Carrera no iniciada")
-    
-    def increment_lap(self):
-        """Incrementa el contador de vueltas solo si la carrera está iniciada"""
-        if self.is_completed:
-            if DEBUG_ENABLED:
-                print("[RACE] Carrera ya completada")
-            return False
+            print("[RACE] Inicializando RaceController...")
         
-        # Verificar si la carrera está iniciada
-        if not self.is_race_started:
-            if DEBUG_ENABLED:
-                print("[RACE] Carrera no iniciada - ignorando detección del sensor")
-            return False
-        
-        # Verificar debounce del sensor
-        current_time = time.time()
-        if current_time - self.last_sensor_time < SENSOR_DEBOUNCE_TIME:
-            if DEBUG_ENABLED:
-                print("[RACE] Debounce - ignorando señal")
-            return False
-        
-        self.last_sensor_time = current_time
-        self.current_laps += 1
-        
-        if DEBUG_ENABLED:
-            print(f"[RACE] Vuelta incrementada: {self.current_laps}/{self.max_laps}")
-        
-        # Verificar si la carrera está completada
-        if self.current_laps >= self.max_laps:
-            self.complete_race()
+        RaceController.max_laps = max_laps
+        RaceController.num_racers = num_racers
+        if racer_names:
+            RaceController.racer_names = racer_names
         else:
-            self.update_display()
+            RaceController.racer_names = [f"Piloto {i+1}" for i in range(num_racers)]
+        RaceController.current_laps = [0 for _ in range(num_racers)]
+        RaceController.stopped_blink_enabled = True
         
-        return True
-    
-    def increment_lap_immediate(self):
-        """Incrementa el contador de vueltas inmediatamente sin debounce para respuesta rápida"""
-        if self.is_completed:
+        if RaceController.traffic_light is None:
             if DEBUG_ENABLED:
-                print("[RACE] Carrera ya completada")
-            return False
-        
-        # Verificar si la carrera está iniciada
-        if not self.is_race_started:
+                print("[RACE] Creando TrafficLightController...")
+            RaceController.traffic_light = TrafficLightController()
             if DEBUG_ENABLED:
-                print("[RACE] Carrera no iniciada - ignorando detección del sensor")
-            return False
+                print("[RACE] TrafficLightController creado")
         
-        # Incrementar inmediatamente sin debounce para respuesta rápida
-        self.current_laps += 1
-        
-        if DEBUG_ENABLED:
-            print(f"[RACE] Vuelta incrementada inmediatamente: {self.current_laps}/{self.max_laps}")
-        
-        # Actualizar display inmediatamente
-        self.update_display()
-        
-        # Verificar si la carrera está completada
-        if self.current_laps >= self.max_laps:
-            self.complete_race()
-        
-        return True
-    
-    def start_race(self):
-        """Inicia la carrera - permite que el sensor cuente vueltas"""
-        # Si hay previa activa, terminarla automáticamente sin mensajes
-        if self.traffic_light and self.traffic_light.current_state == TRAFFIC_LIGHT_STATE_BLINKING:
+        if RaceController.display is None:
             if DEBUG_ENABLED:
-                print("[RACE] Previa activa detectada - terminando automáticamente")
-            try:
-                self.traffic_light.race_previous_stop()
-                # Esperar un momento para que se complete la terminación
-                time.sleep(0.1)
-            except Exception as e:
-                if DEBUG_ENABLED:
-                    print(f"[RACE] Error terminando previa: {e}")
-        
-        # Verificar que la previa se terminó correctamente
-        if self.traffic_light and self.traffic_light.current_state == TRAFFIC_LIGHT_STATE_BLINKING:
+                print("[RACE] Creando MAX7219DualDisplayConfigurable...")
+            RaceController.display = MAX7219DualDisplayConfigurable()
             if DEBUG_ENABLED:
-                print("[RACE] Previa aún activa después de intentar terminarla")
-            # Intentar terminar nuevamente
-            try:
-                self.traffic_light.race_previous_stop()
-                time.sleep(0.1)
-            except Exception as e:
-                if DEBUG_ENABLED:
-                    print(f"[RACE] Error en segundo intento de terminar previa: {e}")
+                print("[RACE] Display creado")
         
-        self.is_race_started = True
+        # Inicializar estado de carrera
+        RaceController.inicializar_carrera()
         
         if DEBUG_ENABLED:
-            print("[RACE] Carrera iniciada - Sensor activo")
+            print(f"[RACE] RaceController inicializado - Estado: {RaceController.race_state}")
+
+    @classmethod
+    def inicializar_carrera(cls):
+        """Inicializa el estado de la carrera: STOPPED con display titilando"""
+        if DEBUG_ENABLED:
+            print("[RACE] Inicializando estado de carrera...")
         
-        return True
-    
-    def stop_race(self):
-        """Detiene la carrera - el sensor no cuenta vueltas"""
-        self.is_race_started = False
+        # Resetear estado
+        cls.race_state = "STOPPED"
+        cls.current_laps = [0 for _ in range(cls.num_racers)]
+        
+        # Asegurar que el semáforo esté apagado
+        if cls.traffic_light:
+            cls.traffic_light.race_previous_stop()
+            cls.traffic_light.race_stop()
+        
+        # Configurar display para estado STOPPED
+        cls._update_display()
         
         if DEBUG_ENABLED:
-            print("[RACE] Carrera detenida - Sensor inactivo")
-        
-        return True
-    
-    def is_race_running(self):
-        """Retorna True si la carrera está iniciada y no completada"""
-        return self.is_race_started and not self.is_completed
-    
-    def reset_race(self):
-        """Reinicia la carrera"""
-        self.current_laps = 0
-        self.is_completed = False
-        self.is_race_started = False  # Resetear estado de carrera iniciada
-        self.last_sensor_time = 0
+            print(f"[RACE] Carrera inicializada - Estado: {cls.race_state}")
+
+    @classmethod
+    def _update_display(cls):
+        """Actualiza el display según el estado actual de la carrera"""
+        if not cls.display:
+            return
         
         if DEBUG_ENABLED:
-            print("[RACE] Carrera reiniciada")
+            print(f"[RACE] Actualizando display - Estado: {cls.race_state}")
         
-        self.update_display()
-        return True
-    
-    def complete_race(self):
-        """Marca la carrera como completada, muestra animación y termina automáticamente"""
-        self.is_completed = True
-        
+        if cls.race_state == "STOPPED":
+            # Mostrar patrón FULL_CIRCLE (con titileo opcional)
+            cls._show_circle_pattern()
+        elif cls.race_state == "PREVIOUS":
+            # Detener titileo de STOPPED si está activo
+            cls.display.stop_pattern_blink()
+            # Mostrar cantidad de vueltas totales (sin titileo)
+            cls._show_max_laps()
+        elif cls.race_state == "STARTED":
+            # Detener titileo de STOPPED si está activo
+            cls.display.stop_pattern_blink()
+            # Mostrar vueltas del corredor 1
+            cls._show_current_laps()
+        elif cls.race_state == "FINISHED":
+            # Detener titileo de STOPPED si está activo
+            cls.display.stop_pattern_blink()
+            # Mostrar bandera a cuadros fija
+            cls._show_checkered_flag()
+
+    @classmethod
+    def _show_circle_pattern(cls):
+        """Muestra el patrón FULL_CIRCLE en el display (con titileo opcional)"""
+        if not cls.display:
+            return
         if DEBUG_ENABLED:
-            print(f"[RACE] ¡Carrera completada! {self.current_laps} vueltas")
+            print(f"[RACE] Mostrando patrón FULL_CIRCLE (titileo: {cls.stopped_blink_enabled})")
         
-        # Mostrar animación de bandera si está habilitada
-        if RACE_SHOW_FLAG_ANIMATION:
-            self.show_flag_animation()
+        if cls.stopped_blink_enabled:
+            # Iniciar titileo continuo usando el display
+            cls.display.start_pattern_blink(FULL_CIRCLE, interval=0.5)
         else:
-            self.update_display()
-        
-        # Esperar a que termine la animación de bandera
-        time.sleep(FLAG_ANIMATION_DURATION)
-        
-        # Terminar la carrera automáticamente
-        self._finish_race_automatically()
-    
-    def _finish_race_automatically(self):
-        """Termina la carrera automáticamente: apaga semáforos, resetea vueltas"""
-        if DEBUG_ENABLED:
-            print("[RACE] Finalizando carrera automáticamente...")
-        
-        # 1. Apagar semáforos
-        if self.traffic_light:
-            self.traffic_light.race_stop()
+            # Detener titileo si está activo
+            cls.display.stop_pattern_blink()
+            # Mostrar patrón fijo inmediatamente después
+            for row in range(8):
+                cls.display.write_register_all(row + 1, FULL_CIRCLE[row])
             if DEBUG_ENABLED:
-                print("[RACE] Semáforos apagados")
-        
-        # 2. Detener la carrera
-        self.stop_race()
-        
-        # 3. Resetear vueltas
-        self.reset_race()
-        
+                print("[RACE] Patrón FULL_CIRCLE mostrado fijo")
+
+    @classmethod
+    def _blink_max_laps(cls):
+        """Hace titilar la cantidad de vueltas totales"""
+        if not cls.display:
+            return
         if DEBUG_ENABLED:
-            print("[RACE] Carrera finalizada automáticamente")
-    
-    def update_display(self):
-        """Actualiza el display con el contador actual"""
-        if self.is_completed:
-            # Mostrar "FI" (Final) cuando está completada
-            self.display.show_two_digits(99)  # Usar 99 como código para "FI"
-        else:
-            # Mostrar número de vueltas
-            self.display.show_two_digits(self.current_laps)
-    
-    def show_flag_animation(self, animation_type=DEFAULT_COMPLETION_ANIMATION):
-        """Muestra animación de bandera configurable"""
+            print(f"[RACE] Titilando max_laps: {cls.max_laps}")
+        
+        # Mostrar max_laps
+        cls.display.show_two_digits(cls.max_laps)
+
+    @classmethod
+    def _show_max_laps(cls):
+        """Muestra la cantidad de vueltas totales (sin titileo)"""
+        if not cls.display:
+            return
         if DEBUG_ENABLED:
-            print(f"[RACE] Iniciando animación: {animation_type}")
+            print(f"[RACE] Mostrando max_laps: {cls.max_laps}")
         
-        if animation_type == "checkered_flag":
-            self._show_checkered_flag_animation()
-        elif animation_type == "spinning_flag":
-            self._show_spinning_flag_animation()
-        elif animation_type == "pulse_flag":
-            self._show_pulse_flag_animation()
-        elif animation_type == "wave_flag":
-            self._show_wave_flag_animation()
-        elif animation_type == "none":
-            # No mostrar animación
-            pass
-        else:
-            # Animación por defecto
-            self._show_checkered_flag_animation()
-    
-    def _show_checkered_flag_animation(self):
-        """Muestra animación de bandera a cuadros clásica con cuadros 2x2 que alterna patrones"""
-        # Usar patrones centralizados
-        checkered_patterns = get_animation_patterns('checkered')
+        # Mostrar max_laps
+        cls.display.show_two_digits(cls.max_laps)
+
+    @classmethod
+    def _show_current_laps(cls):
+        """Muestra las vueltas actuales del corredor 1"""
+        if not cls.display:
+            return
+        laps = cls.current_laps[0]  # Corredor 1
+        if DEBUG_ENABLED:
+            print(f"[RACE] Mostrando vueltas corredor 1: {laps}")
         
-        start_time = time.time()
-        pattern_index = 0
+        cls.display.show_two_digits(laps)
+
+    @classmethod
+    def _show_checkered_flag(cls):
+        """Muestra la bandera a cuadros fija"""
+        if not cls.display:
+            return
+        if DEBUG_ENABLED:
+            print("[RACE] Mostrando bandera a cuadros")
         
-        while time.time() - start_time < FLAG_ANIMATION_DURATION:
-            # Mostrar patrón actual
-            pattern = checkered_patterns[pattern_index % len(checkered_patterns)]
-            for row in range(8):
-                self.display.write_register_all(row + 1, pattern[row])
-            
-            # Cambiar al siguiente patrón
-            pattern_index += 1
-            
-            # Esperar intervalo configurable
-            time.sleep(CHECKERED_FLAG_BLINK_INTERVAL)
-        
-        # Limpiar display al finalizar
-        self.display.clear()
-    
-    def _show_spinning_flag_animation(self):
-        """Muestra animación de bandera giratoria"""
-        # Patrones que simulan rotación
-        spinning_patterns = [
-            # Rotación 0°
-            [0x81, 0x42, 0x24, 0x18, 0x18, 0x24, 0x42, 0x81],
-            # Rotación 45°
-            [0x00, 0x81, 0x42, 0x24, 0x24, 0x42, 0x81, 0x00],
-            # Rotación 90°
-            [0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF],
-            # Rotación 135°
-            [0x00, 0x00, 0x81, 0x42, 0x42, 0x81, 0x00, 0x00],
-        ]
-        
-        start_time = time.time()
-        pattern_index = 0
-        
-        while time.time() - start_time < FLAG_ANIMATION_DURATION:
-            pattern = spinning_patterns[pattern_index % len(spinning_patterns)]
-            
-            for row in range(8):
-                self.display.write_register_all(row + 1, pattern[row])
-            
-            pattern_index += 1
-            time.sleep(FLAG_ANIMATION_SPEED)
-        
-        self.display.clear()
-    
-    def _show_pulse_flag_animation(self):
-        """Muestra animación de bandera pulsante"""
-        # Usar patrones centralizados
-        pulse_patterns = get_animation_patterns('pulse')
-        
-        start_time = time.time()
-        pattern_index = 0
-        
-        while time.time() - start_time < FLAG_ANIMATION_DURATION:
-            pattern = pulse_patterns[pattern_index % len(pulse_patterns)]
-            
-            for row in range(8):
-                self.display.write_register_all(row + 1, pattern[row])
-            
-            pattern_index += 1
-            time.sleep(FLAG_ANIMATION_SPEED)
-        
-        self.display.clear()
-    
-    def _show_wave_flag_animation(self):
-        """Muestra animación de bandera ondulante"""
-        # Usar patrones centralizados
-        wave_patterns = get_animation_patterns('wave')
-        
-        start_time = time.time()
-        pattern_index = 0
-        
-        while time.time() - start_time < FLAG_ANIMATION_DURATION:
-            pattern = wave_patterns[pattern_index % len(wave_patterns)]
-            
-            for row in range(8):
-                self.display.write_register_all(row + 1, pattern[row])
-            
-            pattern_index += 1
-            time.sleep(FLAG_ANIMATION_SPEED)
-        
-        self.display.clear()
-    
-    def get_race_status(self):
-        """Retorna el estado actual de la carrera"""
-        progress_percentage = (self.current_laps / self.max_laps) * 100 if self.max_laps > 0 else 0
-        
+        # Usar el primer patrón de bandera a cuadros
+        checkered_pattern = CHECKERED_FLAG_PATTERNS[0]
+        for row in range(8):
+            cls.display.write_register_all(row + 1, checkered_pattern[row])
+
+    @classmethod
+    def get_race_params(cls):
+        """Devuelve los parámetros actuales de la carrera."""
+        if DEBUG_ENABLED:
+            print(f"[RACE] Obteniendo parámetros - Estado actual: {cls.race_state}")
         return {
-            'current_laps': self.current_laps,
-            'max_laps': self.max_laps,
-            'remaining_laps': max(0, self.max_laps - self.current_laps),
-            'is_completed': self.is_completed,
-            'is_race_started': self.is_race_started,
-            'is_race_running': self.is_race_running(),
-            'progress_percentage': progress_percentage,
-            'racer_name': self.racer_name,
-            'led_status': {
-                'is_on': self.led.value() == 1
-            }
+            'max_laps': cls.max_laps,
+            'num_racers': cls.num_racers,
+            'racer_names': cls.racer_names,
+            'current_laps': cls.current_laps,
+            'race_state': cls.race_state
         }
-    
-    def toggle_led(self):
-        """Alterna el estado del LED"""
-        current_state = self.led.value()
-        self.led.value(not current_state)
+
+    @classmethod
+    def start_race_previous(cls):
+        """Inicia la previa de la carrera: semáforo titilando + display mostrando max_laps"""
+        if DEBUG_ENABLED:
+            print(f"[RACE] Iniciando previa - Estado actual: {cls.race_state}")
+        
+        # Iniciar titileo del semáforo
+        if cls.traffic_light:
+            if DEBUG_ENABLED:
+                print("[RACE] Iniciando titileo del semáforo...")
+            success = cls.traffic_light.race_previous()
+            if not success:
+                if DEBUG_ENABLED:
+                    print("[RACE] ERROR: No se pudo iniciar titileo del semáforo")
+                return False
+        else:
+            if DEBUG_ENABLED:
+                print("[RACE] ERROR: traffic_light es None")
+            return False
+        
+        # Cambiar estado y actualizar display
+        cls.race_state = "PREVIOUS"
+        cls._update_display()
         
         if DEBUG_ENABLED:
-            print(f"[RACE] LED alternado: {'ON' if not current_state else 'OFF'}")
-        
-        return not current_state
-    
-    def turn_on_led(self):
-        """Enciende el LED"""
-        self.led.on()
-        
-        if DEBUG_ENABLED:
-            print("[RACE] LED encendido")
-        
+            print(f"[RACE] Previa iniciada - Estado: {cls.race_state}")
+            print("[RACE] Semáforo titilando + Display mostrando max_laps")
         return True
-    
-    def turn_off_led(self):
-        """Apaga el LED"""
-        self.led.off()
+
+    @classmethod
+    def stop_race_previous(cls):
+        """Detiene la previa de la carrera: apaga semáforo + vuelve a display titilando"""
+        if DEBUG_ENABLED:
+            print(f"[RACE] Deteniendo previa - Estado actual: {cls.race_state}")
+        
+        # Detener titileo del semáforo
+        if cls.traffic_light:
+            if DEBUG_ENABLED:
+                print("[RACE] Deteniendo titileo del semáforo...")
+            success = cls.traffic_light.race_previous_stop()
+            if not success:
+                if DEBUG_ENABLED:
+                    print("[RACE] WARNING: No se pudo detener titileo del semáforo")
+        else:
+            if DEBUG_ENABLED:
+                print("[RACE] ERROR: traffic_light es None")
+        
+        # Volver a estado STOPPED (display titilando)
+        cls.race_state = "STOPPED"
+        cls._update_display()
         
         if DEBUG_ENABLED:
-            print("[RACE] LED apagado")
+            print(f"[RACE] Previa detenida - Estado: {cls.race_state}")
+            print("[RACE] Semáforo apagado + Display titilando")
+        return True
+
+    @classmethod
+    def start_race(cls):
+        """Inicia la carrera: detiene previa, inicia secuencia de semáforo, resetea vueltas."""
+        if DEBUG_ENABLED:
+            print(f"[RACE] Iniciando carrera - Estado actual: {cls.race_state}")
         
+        # Verificar si traffic_light existe
+        if not cls.traffic_light:
+            if DEBUG_ENABLED:
+                print("[RACE] ERROR: traffic_light es None")
+            return False
+        
+        # Detener previa si está activa
+        if cls.traffic_light.current_state == TRAFFIC_LIGHT_STATE_BLINKING:
+            if DEBUG_ENABLED:
+                print("[RACE] Previa activa detectada, deteniendo...")
+            cls.stop_race_previous()
+            time.sleep(0.2)  # Esperar a que se detenga completamente
+            if DEBUG_ENABLED:
+                print("[RACE] Previa detenida, espera completada")
+        else:
+            if DEBUG_ENABLED:
+                print(f"[RACE] No hay previa activa. Estado del semáforo: {cls.traffic_light.current_state}")
+        
+        # Resetear vueltas
+        cls.current_laps = [0 for _ in range(cls.num_racers)]
+        if DEBUG_ENABLED:
+            print(f"[RACE] Vueltas reseteadas: {cls.current_laps}")
+        
+        # Iniciar secuencia de semáforo (roja -> amarilla -> verde)
+        if DEBUG_ENABLED:
+            print("[RACE] Llamando a traffic_light.race_start()...")
+        ok = cls.traffic_light.race_start()
+        if DEBUG_ENABLED:
+            print(f"[RACE] Resultado de race_start: {ok}")
+        
+        if ok:
+            if DEBUG_ENABLED:
+                print("[RACE] Esperando a que la luz verde esté encendida...")
+            # Esperar a que la luz verde esté encendida (máximo 10 segundos)
+            timeout = 10
+            start_time = time.time()
+            while cls.traffic_light.current_state != TRAFFIC_LIGHT_STATE_GREEN:
+                if time.time() - start_time > timeout:
+                    if DEBUG_ENABLED:
+                        print(f"[RACE] TIMEOUT: No se alcanzó luz verde en {timeout} segundos")
+                    return False
+                if DEBUG_ENABLED:
+                    print(f"[RACE] Estado del semáforo: {cls.traffic_light.current_state}")
+                time.sleep(0.1)
+            
+            cls.race_state = "STARTED"
+            cls._update_display()
+            if DEBUG_ENABLED:
+                print(f"[RACE] ¡Luz verde alcanzada! Estado cambiado a: {cls.race_state}")
+            return True
+        else:
+            if DEBUG_ENABLED:
+                print("[RACE] ERROR: No se pudo iniciar la secuencia del semáforo")
         return False
-    
-    def set_brightness(self, brightness):
-        """Cambia el brillo del display"""
-        self.display.set_brightness(brightness)
+
+    @classmethod
+    def stop_race(cls):
+        """Detiene la carrera: reinicializa el estado de la carrera"""
+        if DEBUG_ENABLED:
+            print(f"[RACE] Deteniendo carrera - Estado actual: {cls.race_state}")
+        
+        # Reutilizar el inicializador para resetear todo
+        cls.inicializar_carrera()
         
         if DEBUG_ENABLED:
-            print(f"[RACE] Brillo cambiado a: {brightness}")
-    
-    def set_rotation(self, rotation):
-        """Cambia la rotación del display"""
-        self.display.set_rotation(rotation)
-        
+            print("[RACE] Carrera detenida y reinicializada")
+        return True
+
+    @classmethod
+    def set_race_state(cls, state):
+        """Cambia el estado de la carrera."""
         if DEBUG_ENABLED:
-            print(f"[RACE] Rotación cambiada a: {rotation}°")
-    
-    def set_orientation(self, orientation):
-        """Cambia la orientación del display"""
-        self.display.set_orientation(orientation)
+            print(f"[RACE] Cambiando estado de {cls.race_state} a {state}")
         
-        if DEBUG_ENABLED:
-            print(f"[RACE] Orientación cambiada a: {orientation}")
-    
-    def set_scroll_speed(self, speed):
-        """Cambia la velocidad del scroll del nombre del piloto"""
-        global RACER_NAME_SCROLL_SPEED
-        RACER_NAME_SCROLL_SPEED = max(0.1, min(1.0, speed))  # Limitar entre 0.1 y 1.0 segundos
-        
-        if DEBUG_ENABLED:
-            print(f"[RACE] Velocidad de scroll cambiada a: {RACER_NAME_SCROLL_SPEED}s")
-    
-    def get_scroll_speed(self):
-        """Retorna la velocidad actual del scroll"""
-        return RACER_NAME_SCROLL_SPEED
-    
-    def set_completion_animation(self, animation_type):
-        """Cambia la animación de finalización"""
-        if animation_type in ANIMATION_TYPES:
-            global DEFAULT_COMPLETION_ANIMATION
-            DEFAULT_COMPLETION_ANIMATION = animation_type
-            
+        if state in ["STOPPED", "PREVIOUS", "STARTED", "FINISHED"]:
+            cls.race_state = state
+            cls._update_display()
             if DEBUG_ENABLED:
-                print(f"[RACE] Animación de finalización cambiada a: {animation_type}")
+                print(f"[RACE] Estado cambiado exitosamente a: {cls.race_state}")
             return True
         else:
             if DEBUG_ENABLED:
-                print(f"[RACE] Animación no válida: {animation_type}")
-            return False
-    
-    def get_available_animations(self):
-        """Retorna las animaciones disponibles"""
-        return ANIMATION_TYPES
-    
-    def test_animation(self, animation_type):
-        """Prueba una animación específica"""
-        if animation_type in ANIMATION_TYPES:
-            if DEBUG_ENABLED:
-                print(f"[RACE] Probando animación: {animation_type}")
-            self.show_flag_animation(animation_type)
-            return True
-        else:
-            if DEBUG_ENABLED:
-                print(f"[RACE] Animación no válida: {animation_type}")
-            return False
-    
-    def get_racer_name(self):
-        """Retorna el nombre actual del piloto"""
-        return self.racer_name
-    
-    def set_racer_name(self, name):
-        """Cambia el nombre del piloto y lo muestra en el display"""
-        if name and len(name) <= RACER_NAME_MAX_LENGTH:
-            self.racer_name = name
-            if DEBUG_ENABLED:
-                print(f"[RACE] Nombre del piloto cambiado a: {name}")
-            
-            # Mostrar el nombre con scroll después de guardarlo
-            self.display_racer_name_with_scroll()
-            return True
-        else:
-            if DEBUG_ENABLED:
-                print(f"[RACE] Nombre inválido: {name}")
-            return False
-    
-    def display_racer_name(self):
-        """Muestra el nombre del piloto en el display con casco"""
-        racer_display_text = RACER_DISPLAY_PREFIX + self.racer_name
+                print(f"[RACE] ERROR: Estado inválido: {state}")
+        return False
+
+    @classmethod
+    def set_stopped_blink(cls, enabled):
+        """Habilita o deshabilita el titileo del patrón en estado STOPPED"""
+        cls.stopped_blink_enabled = enabled
         if DEBUG_ENABLED:
-            print(f"[RACE] Mostrando nombre del piloto: {racer_display_text}")
-        # Mostrar solo la primera letra del nombre
-        name_only = self.racer_name[:1]
-        if len(name_only) == 1 and name_only[0].isalpha():
-            char_num = ord(name_only[0].upper()) - ord('A') + 1
-            if char_num > 99:
-                char_num = 99
-            self.display.show_helmet_and_digit(char_num)
-        else:
-            self.display.show_helmet_and_digit(0)
-    
-    def display_racer_name_with_scroll(self):
-        """Muestra el nombre del piloto con scroll: [Casco] NOMBRE PILOTO"""
+            print(f"[RACE] Titileo en STOPPED {'habilitado' if enabled else 'deshabilitado'}")
+        
+        # Actualizar display si está en estado STOPPED
+        if cls.race_state == "STOPPED":
+            cls._update_display()
+
+    @classmethod
+    def get_stopped_blink_status(cls):
+        """Retorna el estado actual del titileo en STOPPED"""
+        return cls.stopped_blink_enabled
+
+    @classmethod
+    def update(cls):
+        """Actualiza el estado del controlador (debe ser llamado desde el bucle principal)"""
         if DEBUG_ENABLED:
-            print(f"[RACE] Mostrando nombre con scroll: {self.racer_name.upper()}")
+            print(f"[RACE] Update() - Estado: {cls.race_state}")
         
-        # Mostrar scroll del texto con casco real y velocidad configurable
-        self.display.scroll_text_with_helmet(self.racer_name, scroll_speed=RACER_NAME_SCROLL_SPEED, repeat=False)
-        
-        # Después del scroll, volver al estado normal del display
-        self.update_display()
-    
-    # =============================================================================
-    # MÉTODOS DEL SEMÁFORO
-    # =============================================================================
-    
-    def race_previous(self):
-        """Inicia el titileo de todas las luces del semáforo"""
-        return self.traffic_light.race_previous()
-    
-    def race_previous_stop(self):
-        """Detiene el titileo de todas las luces del semáforo"""
-        return self.traffic_light.race_previous_stop()
-    
-    def race_start(self):
-        """Inicia la secuencia de largada: Roja -> Amarilla -> Verde"""
-        return self.traffic_light.race_start()
-    
-    def race_stop(self):
-        """Apaga las luces verdes del semáforo"""
-        return self.traffic_light.race_stop()
-    
-    def get_traffic_light_status(self):
-        """Retorna el estado actual del semáforo"""
-        return self.traffic_light.get_status()
-    
-    def cleanup(self):
-        """Limpia recursos al finalizar"""
-        self.led.off()
-        self.display.clear()
-        self.traffic_light.cleanup()
-        
-        if DEBUG_ENABLED:
-            print("[RACE] Limpieza completada") 
+        if cls.traffic_light:
+            cls.traffic_light.update_blinking()
+        if cls.display:
+            cls.display.update_pattern_blink()
+            # Debug adicional para verificar el estado del titileo
+            if cls.display.is_blinking():
+                if DEBUG_ENABLED:
+                    print(f"[RACE] Display titilando activamente - blink_state: {cls.display.blink_state}") 
