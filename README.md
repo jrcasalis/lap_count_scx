@@ -1,102 +1,202 @@
-# Controlador LED y Contador de Vueltas - Raspberry Pi Pico 2W
+# 🏁 Controlador de Carrera - Raspberry Pi Pico 2W
 
-Este proyecto permite controlar un LED, un contador de vueltas con display doble MAX7219 (8x16 LEDs) y un semáforo para la largada de carreras en la Raspberry Pi Pico 2W, todo mediante una interfaz web moderna.
+Sistema completo de control de carrera para pista Scalextric con interfaz web moderna y control de semáforo.
 
-## 🚀 Características
+## 🌟 Características Principales
 
-- Control de LED mediante interfaz web
-- Contador de vueltas de carrera con animaciones
-- Display MAX7219 flexible (8x8 o 16x8 LEDs, doble módulo en cascada)
-- **Sistema de semáforo para largada de carreras**
-- Animación de bandera a cuadros alternante (siempre visible)
-- Animaciones configurables desde la web
-- Servidor web integrado en MicroPython
-- Interfaz moderna y responsive
-- Documentación completa
-- Estructura de proyecto escalable
+### ✅ Hardware
+- **Display MAX7219** dual configurable con titileo
+- **Semáforo LED** con secuencia de largada
+- **Sensor TCRT5000** para detección de vueltas
+- **Conexión WiFi** integrada
 
-## ✅ Driver y sistema configurables
+### ✅ Software
+- **Servidor web** optimizado para MicroPython
+- **Interfaz web** moderna y responsiva
+- **API REST** completa
+- **Polling optimizado** del titileo
+- **Control remoto** desde cualquier dispositivo
 
-### **Nuevas características implementadas:**
+### 🚀 Funcionalidades
+- 🏁 Iniciar/Detener carrera con secuencia de semáforo
+- ⚠️ Previa con titileo del semáforo
+- 💡 Control del titileo del display
+- 🏎️ Configuración de nombres de pilotos
+- 📊 Monitoreo en tiempo real
+- 🔄 Reinicio automático del sistema
 
-#### **🔧 Parámetros configurables:**
-- **`brightness`** (0-15): Control de brillo
-- **`rotation`** (0°, 90°, 180°, 270°): Rotación del texto
-- **`orientation`** ('horizontal'/'vertical'): Orientación del display
+## 🚀 Instalación y Uso
 
-#### **🔄 Funciones de configuración:**
-- **`set_brightness(brightness)`** - Cambiar brillo en tiempo real
-- **`set_rotation(rotation)`** - Cambiar rotación
-- **`set_orientation(orientation)`** - Cambiar orientación
+### 1. Configuración WiFi
+Edita `src/config.py` y configura tus credenciales WiFi:
+```python
+WIFI_SSID = "tu_red_wifi"
+WIFI_PASSWORD = "tu_contraseña"
+```
 
-#### **📱 Funciones de visualización:**
-- **`show_two_digits(value)`** - Muestra números con configuración aplicada
-- **`show_text(text)`** - Muestra texto (números)
-- **Animaciones de bandera a cuadros, giratoria, pulsante, ondulante y alternante**
+### 2. Conexión Hardware
+Conecta los componentes según la configuración en `config.py`:
+- **Display MAX7219**: Pines 3, 5, 2 (DIN, CS, CLK)
+- **Semáforo**: Pines 11, 12, 13 (Rojo, Amarillo, Verde)
+- **Sensor**: Pin 16 (TCRT5000)
 
-### **📁 Archivos principales:**
+### 3. Ejecutar Sistema
+```bash
+# En el Raspberry Pi Pico W
+python src/main.py
+```
 
-- `src/max7219_dual_display_configurable.py` - Driver principal configurable
-- `src/race_controller.py` - Lógica de carrera y animaciones
-- `src/web_server.py` - Servidor web y API
-- `src/main.py` - Arranque principal
-- `src/config.py` - Configuración centralizada
-- `patterns/` - Patrones centralizados (dígitos, letras, varios, animaciones)
-- `examples/` - Ejemplos de uso y pruebas
-- `web/` - Interfaz web (HTML, CSS, JS)
+### 4. Acceder a la Interfaz
+El sistema mostrará la dirección IP:
+```
+[WEB] 🌐 Servidor web disponible en: http://192.168.1.100:80
+```
 
-### **🧪 Ejemplos disponibles:**
+Abre tu navegador y ve a esa dirección.
 
-- `examples/test_checkered_flag_alternating.py` - Prueba de animación de bandera a cuadros alternante
-- `examples/test_checkered_flag_blink.py` - Prueba de bandera a cuadros (alternancia)
-- `examples/test_animations.py` - Prueba de todas las animaciones disponibles
-- `examples/test_web_integration.py` - Prueba de integración web
-- `examples/test_web_integration_fixed.py` - Prueba de integración web con patrones centralizados
-- `examples/test_complete_system.py` - Prueba del sistema completo
-- `examples/test_racer_name_fixed.py` - Prueba del nombre del piloto con casco
-- `examples/test_helmet_display.py` - Prueba del display con casco
-- `examples/test_patterns_centralized.py` - Prueba de patrones centralizados
-- `examples/test_various_patterns.py` - Prueba de todos los patrones varios
-- `examples/test_letters.py` - Prueba de todas las letras A-Z
-- `examples/test_racer_name_scroll.py` - Prueba el scroll del nombre del piloto después de guardarlo
-- `examples/test_web_racer_name_fixed.py` - Prueba el nombre del piloto desde la interfaz web
-- `examples/test_racer_name_web_fixed.py` - Prueba el nombre del piloto desde la web (versión corregida)
-- `examples/test_helmet_scroll_fixed.py` - Prueba el scroll con casco real y velocidad configurable
-- `examples/test_long_names_scroll.py` - Prueba nombres largos con scroll mejorado
-- `examples/test_traffic_light.py` - Prueba el sistema de semáforo para largada de carreras
+## 📁 Estructura del Proyecto
 
-## 📋 API HTTP REST
+```
+src/
+├── main.py                           # 🚀 Archivo principal (servidor web)
+├── web_server.py                     # 🌐 Servidor web optimizado
+├── config.py                         # ⚙️ Configuración unificada
+├── race_controller.py                # 🏁 Controlador de carrera
+├── traffic_light_controller.py       # 🚦 Controlador del semáforo
+├── max7219_dual_display_configurable.py  # 📺 Display configurable
+└── patterns/                         # 🎨 Patrones y animaciones
+    ├── animations.py
+    ├── digits.py
+    ├── letters.py
+    └── various.py
+```
 
-### Endpoints principales:
+## 🌐 Interfaz Web
 
-#### LED
-- `GET /api/led/on` - Enciende el LED
-- `GET /api/led/off` - Apaga el LED
-- `GET /api/led/toggle` - Alterna el LED
-- `GET /api/led/status` - Estado del LED
+### Características
+- **Diseño responsivo** - Funciona en móviles y tablets
+- **Actualización en tiempo real** - Estado del sistema
+- **Control completo** - Todas las funciones desde el navegador
+- **API REST** - Para integración con otras aplicaciones
 
-#### Contador de vueltas
-- `GET /api/lap/increment` - Incrementa el contador de vueltas
-- `GET /api/lap/reset` - Reinicia la carrera
-- `GET /api/lap/status` - Estado actual de la carrera (vueltas, progreso, completado)
+### Funciones Disponibles
+- 🏁 **Iniciar Carrera** - Secuencia completa de semáforo
+- 🛑 **Parar Carrera** - Detener y reiniciar
+- ⚠️ **Previa** - Titileo del semáforo
+- 💡 **Titileo Display** - Control del parpadeo
+- 🏎️ **Configurar Piloto** - Cambiar nombres
+- 📊 **Estado en Tiempo Real** - Monitoreo continuo
 
-#### Animaciones
-- `GET /api/animation/test` - Prueba la animación de bandera a cuadros
-- `GET /api/animation/set` - Cambia la animación de finalización
-- `GET /api/animation/list` - Lista las animaciones disponibles
+## ⚙️ Configuración
 
-#### Nombre del piloto
-- `GET /api/racer/name` - Obtiene el nombre del piloto
-- `GET /api/racer/display` - Muestra el nombre del piloto en el display
+### Servidor Web
+```python
+WEB_SERVER_PORT = 80              # Puerto HTTP
+WEB_UPDATE_INTERVAL = 0.1         # Polling del titileo (100ms)
+WEB_DEBUG_ENABLED = False         # Debug del servidor
+```
 
-#### Semáforo
-- `GET /api/traffic/previous` - Inicia el titileo de todas las luces del semáforo
-- `GET /api/traffic/previous/stop` - Detiene el titileo de todas las luces del semáforo
-- `GET /api/traffic/start` - Inicia la secuencia de largada (Roja -> Amarilla -> Verde)
-- `GET /api/traffic/stop` - Apaga las luces verdes del semáforo
-- `GET /api/traffic/status` - Obtiene el estado actual del semáforo
+### Carrera
+```python
+RACE_MAX_LAPS = 15               # Vueltas máximas
+RACE_AUTO_RESET = True           # Reinicio automático
+```
 
-#### Web
-- `/` - Interfaz web principal
-- `/style.css` - Estilos CSS
-- `/script.js` - JavaScript del frontend
+### Display
+```python
+MAX7219_BRIGHTNESS = 8           # Brillo (0-15)
+MAX7219_ROTATION = 90            # Rotación
+```
+
+## 🔧 API REST
+
+### Endpoints Disponibles
+
+#### `GET /api/status`
+Obtiene el estado actual del sistema.
+
+#### `GET /api/start_race`
+Inicia la carrera con secuencia de semáforo.
+
+#### `GET /api/stop_race`
+Detiene la carrera.
+
+#### `GET /api/start_previous`
+Inicia la previa (titileo del semáforo).
+
+#### `GET /api/stop_previous`
+Detiene la previa.
+
+#### `GET /api/reset_race`
+Reinicia el sistema.
+
+#### `GET /api/toggle_blink`
+Alterna el titileo del display.
+
+#### `GET /api/racer_name`
+Obtiene el nombre del piloto.
+
+#### `POST /api/update_racer_name`
+Actualiza el nombre del piloto.
+
+## 🎯 Optimizaciones
+
+### Polling No Bloqueante
+- El titileo funciona continuamente
+- Timeout no bloqueante para conexiones
+- Actualización cada 100ms
+
+### Gestión de Memoria
+- Garbage collector automático
+- Liberación de recursos
+- Límite de solicitudes HTTP
+
+### Manejo de Errores
+- Try-catch en operaciones críticas
+- Respuestas HTTP apropiadas
+- Logging configurable
+
+## 🐛 Solución de Problemas
+
+### El servidor no inicia
+1. Verifica la conexión WiFi
+2. Asegúrate de que el puerto no esté en uso
+3. Revisa los logs de debug
+
+### La interfaz no se carga
+1. Verifica la dirección IP mostrada
+2. Asegúrate de estar en la misma red WiFi
+3. Intenta desde otro navegador
+
+### El titileo no funciona
+1. El polling continúa en el servidor
+2. Verifica las conexiones del hardware
+3. Revisa los logs del controlador
+
+## 🔮 Próximas Mejoras
+
+- [ ] WebSockets para actualizaciones en tiempo real
+- [ ] Autenticación de usuarios
+- [ ] Configuración desde la interfaz web
+- [ ] Logs de eventos
+- [ ] Backup automático de configuración
+- [ ] Modo offline con cache
+- [ ] Notificaciones push
+- [ ] Integración con sensores adicionales
+
+## 📄 Licencia
+
+Este proyecto está bajo la licencia MIT. Ver `LICENSE` para más detalles.
+
+## 🤝 Contribuir
+
+Para contribuir al proyecto:
+1. Fork el repositorio
+2. Crea una rama para tu feature
+3. Implementa los cambios
+4. Prueba exhaustivamente
+5. Envía un pull request
+
+---
+
+**🏁 ¡Disfruta de tu pista de Scalextric controlada! 🏁**

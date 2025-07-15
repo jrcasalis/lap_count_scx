@@ -2,257 +2,33 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controlador de Carrera - Raspberry Pi Pico 2W</title>
-    <link rel="stylesheet" href="/style.css">
+    <title>Control Carrera Pico W</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #fafafa; margin: 0; padding: 2em; }
+        .container { max-width: 400px; margin: 2em auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 2em; text-align: center; }
+        h1 { font-size: 1.5em; margin-bottom: 1em; }
+        button { margin: 0.5em 0; padding: 0.7em 2em; font-size: 1em; border: none; border-radius: 4px; background: #1976d2; color: #fff; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #1565c0; }
+        .msg { margin-top: 1em; color: #388e3c; font-weight: bold; }
+    </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>🏁 Controlador de Carrera</h1>
-            <p>Raspberry Pi Pico 2W</p>
-        </header>
-        
-        <main>
-            <!-- Cards Grid Responsivo -->
-            <div class="cards-grid">
-                
-                <!-- Card 1: Estado de la Carrera -->
-                <div class="card race-status-card">
-                    <div class="card-header">
-                        <h3>🏁 Estado de la Carrera</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="lap-counter">
-                            <div class="lap-display">
-                                <span id="currentLap">0</span>
-                                <span class="separator">/</span>
-                                <span id="maxLaps">15</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="progressFill"></div>
-                            </div>
-                            <p id="raceStatus" class="status-text">Listo para comenzar</p>
-                            <div class="race-state-info">
-                                <div class="state-item">
-                                    <span class="state-label">Carrera:</span>
-                                    <span id="raceState" class="state-value">No Iniciada</span>
-                                </div>
-                                <div class="state-item">
-                                    <span class="state-label">Vueltas:</span>
-                                    <span id="lapCount" class="state-value">0</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-footer">
-                        <button class="btn btn-primary" onclick="incrementLap()">
-                            <span class="icon">🏁</span>
-                            Incrementar Vuelta
-                        </button>
-                        <button class="btn btn-secondary" onclick="resetRace()">
-                            <span class="icon">🔄</span>
-                            Reiniciar
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Card 2: Piloto -->
-                <div class="card racer-card">
-                    <div class="card-header">
-                        <h3>🏎️ Piloto</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="racer-info">
-                            <label for="racerName">Nombre:</label>
-                            <input type="text" id="racerName" placeholder="Nombre del piloto" maxlength="10">
-                            <div class="current-racer">
-                                <span>Actual: </span>
-                                <span id="currentRacerName" class="racer-name">Racer 1</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-footer">
-                        <button class="btn btn-info" onclick="setRacerName()">
-                            <span class="icon">💾</span>
-                            Guardar
-                        </button>
-                        <button class="btn btn-warning" onclick="displayRacerName()">
-                            <span class="icon">📺</span>
-                            Mostrar
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Card 3: Semáforo -->
-                <div class="card traffic-light-card">
-                    <div class="card-header">
-                        <h3>🚦 Semáforo</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="traffic-lights-row">
-                            <div class="traffic-light-container">
-                                <div class="traffic-light-pole"></div>
-                                <div class="traffic-light-housing">
-                                    <div class="light red-light" id="redLight1">
-                                        <div class="light-bulb"></div>
-                                        <div class="light-glow"></div>
-                                    </div>
-                                    <div class="light yellow-light" id="yellowLight1">
-                                        <div class="light-bulb"></div>
-                                        <div class="light-glow"></div>
-                                    </div>
-                                    <div class="light green-light" id="greenLight1">
-                                        <div class="light-bulb"></div>
-                                        <div class="light-glow"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="traffic-light-container">
-                                <div class="traffic-light-pole"></div>
-                                <div class="traffic-light-housing">
-                                    <div class="light red-light" id="redLight2">
-                                        <div class="light-bulb"></div>
-                                        <div class="light-glow"></div>
-                                    </div>
-                                    <div class="light yellow-light" id="yellowLight2">
-                                        <div class="light-bulb"></div>
-                                        <div class="light-glow"></div>
-                                    </div>
-                                    <div class="light green-light" id="greenLight2">
-                                        <div class="light-bulb"></div>
-                                        <div class="light-glow"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="traffic-light-container">
-                                <div class="traffic-light-pole"></div>
-                                <div class="traffic-light-housing">
-                                    <div class="light red-light" id="redLight3">
-                                        <div class="light-bulb"></div>
-                                        <div class="light-glow"></div>
-                                    </div>
-                                    <div class="light yellow-light" id="yellowLight3">
-                                        <div class="light-bulb"></div>
-                                        <div class="light-glow"></div>
-                                    </div>
-                                    <div class="light green-light" id="greenLight3">
-                                        <div class="light-bulb"></div>
-                                        <div class="light-glow"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="traffic-light-container">
-                                <div class="traffic-light-pole"></div>
-                                <div class="traffic-light-housing">
-                                    <div class="light red-light" id="redLight4">
-                                        <div class="light-bulb"></div>
-                                        <div class="light-glow"></div>
-                                    </div>
-                                    <div class="light yellow-light" id="yellowLight4">
-                                        <div class="light-bulb"></div>
-                                        <div class="light-glow"></div>
-                                    </div>
-                                    <div class="light green-light" id="greenLight4">
-                                        <div class="light-bulb"></div>
-                                        <div class="light-glow"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="traffic-status">
-                            <div class="status-item">
-                                <span class="status-label">Estado:</span>
-                                <span id="trafficLightStatus" class="status-value">Apagado</span>
-                            </div>
-                            <div class="status-item">
-                                <span class="status-label">Luces:</span>
-                                <span id="trafficLightsState" class="status-value">Roja: OFF | Amarilla: OFF | Verde: OFF</span>
-                            </div>
-                            <div class="status-item">
-                                <span class="status-label">Carrera:</span>
-                                <span id="raceInitStatus" class="status-value">No Iniciada</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-footer">
-                        <button class="btn btn-warning" onclick="startRacePrevious()">
-                            <span class="icon">⚠️</span>
-                            Iniciar Previa
-                        </button>
-                        <button class="btn btn-danger" onclick="stopRacePrevious()" id="stopPreviousBtn" style="display: none;">
-                            <span class="icon">⏹️</span>
-                            Terminar Previa
-                        </button>
-                        <button class="btn btn-success" onclick="startRace()">
-                            <span class="icon">🏁</span>
-                            Largar
-                        </button>
-                        <button class="btn btn-secondary" onclick="stopRace()">
-                            <span class="icon">🛑</span>
-                            Parar
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Card 4: Información del Sistema -->
-                <div class="card system-info-card">
-                    <div class="card-header">
-                        <h3>ℹ️ Sistema</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="system-info">
-                            <p><strong>Dispositivo:</strong> Raspberry Pi Pico 2W</p>
-                            <p><strong>Display:</strong> MAX7219</p>
-                            <p><strong>LED:</strong> GP0</p>
-                            <p><strong>Sensor:</strong> TCRT5000 (GP16)</p>
-                            <p><strong>IP:</strong> <span id="deviceIP">Cargando...</span></p>
-                            <p><strong>Estado:</strong> <span id="connectionStatus">Conectando...</span></p>
-                        </div>
-                    </div>
-                    <div class="card-footer">
-                        <button class="btn btn-secondary" onclick="refreshStatus()">
-                            <span class="icon">🔄</span>
-                            Actualizar
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Card 5: Control LED (penúltimo lugar) -->
-                <div class="card led-control-card">
-                    <div class="card-header">
-                        <h3>🔴 Control LED</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="led-status">
-                            <div class="led-indicator" id="ledIndicator"></div>
-                            <span id="ledStatus">Apagado</span>
-                        </div>
-                    </div>
-                    <div class="card-footer">
-                        <button class="btn btn-success" onclick="turnOnLED()">
-                            <span class="icon">🔴</span>
-                            Encender
-                        </button>
-                        <button class="btn btn-danger" onclick="turnOffLED()">
-                            <span class="icon">⚪</span>
-                            Apagar
-                        </button>
-                    </div>
-                </div>
-                
-            </div>
-        </main>
-        
-        <footer>
-            <p>Desarrollado con ❤️ para Raspberry Pi Pico 2W</p>
-        </footer>
+        <h1>Control Carrera Pico W</h1>
+        <button onclick="accion('/start_race')">Iniciar Carrera</button><br>
+        <button onclick="accion('/stop_race')">Parar Carrera</button><br>
+        <button onclick="accion('/start_previous')">Iniciar Previa</button><br>
+        <button onclick="accion('/stop_previous')">Parar Previa</button><br>
+        <button onclick="accion('/reset')">Resetear</button>
+        <div class="msg" id="msg"></div>
     </div>
-    
-    <script src="/script.js"></script>
+    <script>
+        function accion(ruta) {
+            fetch(ruta)
+                .then(r => r.text())
+                .then(txt => { document.getElementById('msg').textContent = txt; })
+                .catch(() => { document.getElementById('msg').textContent = 'Error de conexión'; });
+        }
+    </script>
 </body>
 </html> 

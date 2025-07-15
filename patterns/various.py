@@ -147,6 +147,18 @@ CIRCLE = [
     0b00111100
 ]
 
+# Patrón de círculo relleno
+FULL_CIRCLE = [
+    0b00111100,
+    0b01111110,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b01111110,
+    0b00111100
+]
+
 # Patrón de cuadrado
 SQUARE = [
     0b11111111,
@@ -202,6 +214,7 @@ def get_various_pattern(pattern_name):
         
         # Formas geométricas
         'circle': CIRCLE,
+        'full_circle': FULL_CIRCLE,
         'square': SQUARE,
         'triangle': TRIANGLE,
     }
@@ -213,5 +226,5 @@ def get_available_patterns():
         'helmet', 'helmet_simple', 'helmet_empty',
         'heart', 'star', 'check', 'x_mark',
         'arrow_up', 'arrow_down', 'arrow_right', 'arrow_left',
-        'circle', 'square', 'triangle'
+        'circle', 'full_circle', 'square', 'triangle'
     ] 

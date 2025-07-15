@@ -9,7 +9,7 @@ from machine import Pin, PWM
 from config import *
 
 class TrafficLightController:
-    def __init__(self, race_controller=None):
+    def __init__(self):
         """Inicializa el controlador del semáforo"""
         # Inicializar pines del semáforo con PWM para mejor control
         self.red_light = PWM(Pin(TRAFFIC_LIGHT_RED_PIN), freq=1000)
@@ -22,17 +22,17 @@ class TrafficLightController:
         
         # Estado del semáforo
         self.current_state = TRAFFIC_LIGHT_STATE_OFF
-        self.blinking_thread = None
         self.blinking_active = False
         
-        # Referencia al controlador de carrera
-        self.race_controller = race_controller
+        # Variables para polling (sin hilos)
+        self.last_blink_time = 0
+        self.blink_state = False  # True = luces encendidas, False = luces apagadas
         
         # Apagar todas las luces al inicio
         self._turn_off_all_lights()
         
         if DEBUG_ENABLED:
-            print("[TRAFFIC] Controlador de semáforo inicializado")
+            print("[TRAFFIC] Controlador de semáforo inicializado (modo polling)")
             print(f"[TRAFFIC] Pines: Rojo={TRAFFIC_LIGHT_RED_PIN}, Amarillo={TRAFFIC_LIGHT_YELLOW_PIN}, Verde={TRAFFIC_LIGHT_GREEN_PIN}")
             print(f"[TRAFFIC] Duty cycle: ON={self.duty_on}, OFF={self.duty_off}")
     
@@ -52,79 +52,109 @@ class TrafficLightController:
         """Apaga una luz específica"""
         light.duty_u16(self.duty_off)
     
-    def _blinking_thread_function(self):
-        """Función del hilo para el titileo de las luces"""
-        while self.blinking_active:
-            # Encender todas las luces
-            self._turn_on_light(self.red_light)
-            self._turn_on_light(self.yellow_light)
-            self._turn_on_light(self.green_light)
-            time.sleep(TRAFFIC_LIGHT_BLINK_INTERVAL)
+    def update_blinking(self):
+        """Actualiza el estado del titileo (debe ser llamado desde el bucle principal)"""
+        if not self.blinking_active:
+            return
+        
+        current_time = time.time()
+        if current_time - self.last_blink_time >= TRAFFIC_LIGHT_BLINK_INTERVAL:
+            self.last_blink_time = current_time
+            self.blink_state = not self.blink_state
             
-            # Apagar todas las luces
-            self._turn_off_light(self.red_light)
-            self._turn_off_light(self.yellow_light)
-            self._turn_off_light(self.green_light)
-            time.sleep(TRAFFIC_LIGHT_BLINK_INTERVAL)
+            if self.blink_state:
+                # Encender todas las luces
+                self._turn_on_light(self.red_light)
+                self._turn_on_light(self.yellow_light)
+                self._turn_on_light(self.green_light)
+                if DEBUG_ENABLED:
+                    print("[TRAFFIC] Titileo: luces ENCENDIDAS")
+            else:
+                # Apagar todas las luces
+                self._turn_off_light(self.red_light)
+                self._turn_off_light(self.yellow_light)
+                self._turn_off_light(self.green_light)
+                if DEBUG_ENABLED:
+                    print("[TRAFFIC] Titileo: luces APAGADAS")
     
     def race_previous(self):
-        """Inicia el titileo de todas las luces del semáforo"""
+        """Inicia el titileo de todas las luces del semáforo a máxima potencia (previa de carrera)"""
+        if DEBUG_ENABLED:
+            print(f"[TRAFFIC] Iniciando previa - Estado actual: {self.current_state}")
+        
         if self.current_state == TRAFFIC_LIGHT_STATE_BLINKING:
             if DEBUG_ENABLED:
                 print("[TRAFFIC] Titileo ya activo")
             return False
         
         # Detener cualquier titileo previo
+        if DEBUG_ENABLED:
+            print("[TRAFFIC] Deteniendo titileo previo...")
         self.race_previous_stop()
         
-        # Iniciar nuevo titileo
+        # Iniciar nuevo titileo (modo polling)
+        if DEBUG_ENABLED:
+            print("[TRAFFIC] Configurando nuevo titileo (modo polling)...")
         self.blinking_active = True
         self.current_state = TRAFFIC_LIGHT_STATE_BLINKING
+        self.last_blink_time = time.time()
+        self.blink_state = False
         
-        try:
-            # Iniciar hilo de titileo
-            self.blinking_thread = _thread.start_new_thread(self._blinking_thread_function, ())
-            
-            if DEBUG_ENABLED:
-                print("[TRAFFIC] Titileo iniciado - todas las luces")
-            return True
-        except Exception as e:
-            if DEBUG_ENABLED:
-                print(f"[TRAFFIC] Error iniciando titileo: {e}")
-            self.blinking_active = False
-            self.current_state = TRAFFIC_LIGHT_STATE_OFF
-            return False
+        if DEBUG_ENABLED:
+            print("[TRAFFIC] Titileo iniciado - todas las luces (modo polling)")
+        return True
     
     def race_previous_stop(self):
-        """Detiene el titileo de todas las luces del semáforo"""
+        """Detiene el titileo de todas las luces del semáforo (fin de la previa)"""
+        if DEBUG_ENABLED:
+            print(f"[TRAFFIC] Deteniendo previa - Estado actual: {self.current_state}")
+        
         if self.current_state != TRAFFIC_LIGHT_STATE_BLINKING:
             if DEBUG_ENABLED:
                 print("[TRAFFIC] No hay titileo activo para detener")
             return False
         
-        # Detener titileo
+        # Detener titileo (modo polling)
+        if DEBUG_ENABLED:
+            print("[TRAFFIC] Deteniendo titileo (modo polling)...")
         self.blinking_active = False
         self.current_state = TRAFFIC_LIGHT_STATE_OFF
         
         # Apagar todas las luces
+        if DEBUG_ENABLED:
+            print("[TRAFFIC] Apagando todas las luces...")
         self._turn_off_all_lights()
         
         if DEBUG_ENABLED:
-            print("[TRAFFIC] Titileo detenido")
+            print("[TRAFFIC] Titileo detenido (modo polling)")
         return True
     
     def race_start(self):
         """Inicia la secuencia de largada: Roja -> Amarilla -> Verde"""
+        if DEBUG_ENABLED:
+            print(f"[TRAFFIC] Iniciando secuencia de largada - Estado actual: {self.current_state}")
+        
         if self.current_state in [TRAFFIC_LIGHT_STATE_RED, TRAFFIC_LIGHT_STATE_YELLOW, TRAFFIC_LIGHT_STATE_GREEN]:
             if DEBUG_ENABLED:
                 print("[TRAFFIC] Secuencia de largada ya en progreso")
             return False
         
+        # Verificar que no hay hilos activos
+        if self.blinking_active:
+            if DEBUG_ENABLED:
+                print("[TRAFFIC] WARNING: Hilo de titileo aún activo, forzando detención...")
+            self.blinking_active = False
+            time.sleep(0.5)  # Esperar más tiempo
+        
         # Detener cualquier titileo previo de forma segura
+        if DEBUG_ENABLED:
+            print("[TRAFFIC] Deteniendo previa antes de largada...")
         try:
             self.race_previous_stop()
             # Esperar un momento para que se complete la terminación
-            time.sleep(0.1)
+            time.sleep(0.2)
+            if DEBUG_ENABLED:
+                print("[TRAFFIC] Previa detenida, espera completada")
         except Exception as e:
             if DEBUG_ENABLED:
                 print(f"[TRAFFIC] Error terminando previa antes de largada: {e}")
@@ -135,17 +165,29 @@ class TrafficLightController:
                 print("[TRAFFIC] Previa aún activa, intentando terminar nuevamente")
             try:
                 self.race_previous_stop()
-                time.sleep(0.1)
+                time.sleep(0.2)
+                if DEBUG_ENABLED:
+                    print("[TRAFFIC] Segundo intento de terminar previa completado")
             except Exception as e:
                 if DEBUG_ENABLED:
                     print(f"[TRAFFIC] Error en segundo intento de terminar previa: {e}")
+        
+        # Verificación final antes de iniciar
+        if self.blinking_active:
+            if DEBUG_ENABLED:
+                print("[TRAFFIC] ERROR: No se pudo detener el hilo de titileo")
+            return False
         
         if DEBUG_ENABLED:
             print("[TRAFFIC] Iniciando secuencia de largada")
         
         # Iniciar hilo para la secuencia de largada
         try:
+            if DEBUG_ENABLED:
+                print("[TRAFFIC] Iniciando hilo de secuencia de largada...")
             _thread.start_new_thread(self._race_start_sequence, ())
+            if DEBUG_ENABLED:
+                print("[TRAFFIC] Hilo de secuencia de largada iniciado")
             return True
         except Exception as e:
             if DEBUG_ENABLED:
@@ -163,6 +205,8 @@ class TrafficLightController:
             self._turn_off_all_lights()
             self._turn_on_light(self.red_light)
             
+            if DEBUG_ENABLED:
+                print(f"[TRAFFIC] Luz roja encendida, esperando {TRAFFIC_LIGHT_RED_DURATION}s...")
             time.sleep(TRAFFIC_LIGHT_RED_DURATION)
             
             # Fase 2: Luz amarilla (mantener roja)
@@ -172,6 +216,8 @@ class TrafficLightController:
             self.current_state = TRAFFIC_LIGHT_STATE_YELLOW
             self._turn_on_light(self.yellow_light)  # Mantener roja y agregar amarilla
             
+            if DEBUG_ENABLED:
+                print(f"[TRAFFIC] Luz amarilla encendida, esperando {TRAFFIC_LIGHT_YELLOW_DURATION}s...")
             time.sleep(TRAFFIC_LIGHT_YELLOW_DURATION)
             
             # Fase 3: Luz verde (apagar roja y amarilla)
@@ -181,12 +227,6 @@ class TrafficLightController:
             self.current_state = TRAFFIC_LIGHT_STATE_GREEN
             self._turn_off_all_lights()
             self._turn_on_light(self.green_light)
-            
-            # Iniciar la carrera automáticamente cuando se enciende la luz verde
-            if self.race_controller:
-                self.race_controller.start_race()
-                if DEBUG_ENABLED:
-                    print("[TRAFFIC] Carrera iniciada automáticamente")
             
             if DEBUG_ENABLED:
                 print("[TRAFFIC] Secuencia de largada completada")
@@ -199,11 +239,16 @@ class TrafficLightController:
     
     def race_stop(self):
         """Apaga las luces verdes del semáforo"""
+        if DEBUG_ENABLED:
+            print(f"[TRAFFIC] Deteniendo carrera - Estado actual: {self.current_state}")
+        
         if self.current_state != TRAFFIC_LIGHT_STATE_GREEN:
             if DEBUG_ENABLED:
                 print("[TRAFFIC] No hay luz verde activa para apagar")
             return False
         
+        if DEBUG_ENABLED:
+            print("[TRAFFIC] Apagando luces verdes...")
         self.current_state = TRAFFIC_LIGHT_STATE_OFF
         self._turn_off_all_lights()
         
@@ -223,13 +268,35 @@ class TrafficLightController:
     
     def cleanup(self):
         """Limpia recursos al finalizar"""
+        if DEBUG_ENABLED:
+            print("[TRAFFIC] Iniciando limpieza de recursos...")
+        
+        # Detener todos los procesos activos
         self.race_previous_stop()
         self.race_stop()
         
+        # Asegurar que no hay hilos activos
+        if self.blinking_active:
+            if DEBUG_ENABLED:
+                print("[TRAFFIC] Forzando terminación de hilos activos...")
+            self.blinking_active = False
+            time.sleep(0.5)
+        
         # Desactivar PWM
+        if DEBUG_ENABLED:
+            print("[TRAFFIC] Desactivando PWM...")
         self.red_light.deinit()
         self.yellow_light.deinit()
         self.green_light.deinit()
         
         if DEBUG_ENABLED:
-            print("[TRAFFIC] Limpieza completada") 
+            print("[TRAFFIC] Limpieza completada")
+
+    def get_thread_status(self):
+        """Retorna información sobre el estado del titileo"""
+        return {
+            'blinking_active': self.blinking_active,
+            'current_state': self.current_state,
+            'blink_state': self.blink_state,
+            'last_blink_time': self.last_blink_time
+        } 
