@@ -99,7 +99,7 @@ RACER_NAME_SCROLL_SPEED = 0.15  # Velocidad del scroll del nombre (segundos) - M
 # =============================================================================
 # CONFIGURACIÓN DE DEBUG
 # =============================================================================
-DEBUG_ENABLED = False      # Habilitar mensajes de debug
+DEBUG_ENABLED = True      # Habilitar mensajes de debug
 DEBUG_LEVEL = "INFO"      # Nivel de debug: "DEBUG", "INFO", "WARNING", "ERROR"
 
 # =============================================================================

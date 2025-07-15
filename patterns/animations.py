@@ -7,15 +7,12 @@ Patrones 8x8 para animaciones de bandera a cuadros y otras
 CHECKERED_FLAG_PATTERNS = [
     # Variación 1: Cuadros básicos
     [0b11001100, 0b11001100, 0b00110011, 0b00110011, 0b11001100, 0b11001100, 0b00110011, 0b00110011],
-    
     # Variación 2: Cuadros invertidos
     [0b00110011, 0b00110011, 0b11001100, 0b11001100, 0b00110011, 0b00110011, 0b11001100, 0b11001100],
-    
-    # Variación 3: Cuadros alternados
-    [0b10101010, 0b01010101, 0b10101010, 0b01010101, 0b10101010, 0b01010101, 0b10101010, 0b01010101],
-    
-    # Variación 4: Cuadros cruzados
-    [0b10011001, 0b01100110, 0b10011001, 0b01100110, 0b10011001, 0b01100110, 0b10011001, 0b01100110]
+    # # Variación 3: Cuadros alternados
+    # [0b10101010, 0b01010101, 0b10101010, 0b01010101, 0b10101010, 0b01010101, 0b10101010, 0b01010101],
+    # # Variación 4: Cuadros cruzados
+    # [0b10011001, 0b01100110, 0b10011001, 0b01100110, 0b10011001, 0b01100110, 0b10011001, 0b01100110]
 ]
 
 # Patrones de animación pulsante

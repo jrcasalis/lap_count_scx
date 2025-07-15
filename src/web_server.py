@@ -11,7 +11,8 @@ from config import *
 from race_controller import RaceController
 
 class WebServer:
-    def __init__(self):
+    def __init__(self, controller):
+        self.controller = controller
         self.wlan = None
         self.server_socket = None
         self.is_running = False
@@ -93,19 +94,19 @@ class WebServer:
                                 if path == '/' or path == '/index.html':
                                     response = self.serve_index()
                                 elif path == '/start_race':
-                                    RaceController.start_race()
+                                    self.controller.start_race()
                                     response = self.text_response('Carrera iniciada')
                                 elif path == '/stop_race':
-                                    RaceController.stop_race()
+                                    self.controller.stop_race()
                                     response = self.text_response('Carrera detenida')
                                 elif path == '/start_previous':
-                                    RaceController.start_race_previous()
+                                    self.controller.start_race_previous()
                                     response = self.text_response('Previa iniciada')
                                 elif path == '/stop_previous':
-                                    RaceController.stop_race_previous()
+                                    self.controller.stop_race_previous()
                                     response = self.text_response('Previa detenida')
                                 elif path == '/reset':
-                                    RaceController.inicializar_carrera()
+                                    self.controller.inicializar_carrera()
                                     response = self.text_response('Parámetros reseteados')
                                 else:
                                     response = self.get_404()
@@ -182,7 +183,8 @@ class WebServer:
             try:
                 current_time = time.time()
                 if current_time - self.last_update >= self.update_interval:
-                    RaceController.update()
+                    self.controller.update()
+                    self.controller.poll_sensor_and_update_laps()
                     self.last_update = current_time
                 try:
                     client_socket, address = self.server_socket.accept()
@@ -205,7 +207,30 @@ class WebServer:
         return True
 
 def start_web_server():
-    server = WebServer()
+    # Assuming RaceController is available globally or passed as an argument
+    # For now, we'll create an instance directly, but ideally, it should be passed
+    # from the main application.
+    # For demonstration, we'll create a dummy controller if not available.
+    # In a real scenario, you'd pass the actual RaceController instance.
+    # For now, we'll create a dummy one.
+    class DummyController:
+        def update(self):
+            print("Dummy update called")
+        def poll_sensor_and_update_laps(self):
+            print("Dummy poll_sensor_and_update_laps called")
+        def start_race(self):
+            print("Dummy start_race called")
+        def stop_race(self):
+            print("Dummy stop_race called")
+        def start_race_previous(self):
+            print("Dummy start_race_previous called")
+        def stop_race_previous(self):
+            print("Dummy stop_race_previous called")
+        def inicializar_carrera(self):
+            print("Dummy inicializar_carrera called")
+
+    dummy_controller = DummyController()
+    server = WebServer(dummy_controller)
     return server.run()
 
 if __name__ == "__main__":

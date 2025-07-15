@@ -20,10 +20,11 @@ class MAX7219DualDisplayConfigurable:
             rotation: Rotación en grados (0, 90, 180, 270)
             orientation: 'horizontal' o 'vertical'
         """
-        if DEBUG_ENABLED:
-            print("[MAX7219] Inicializando display MAX7219 configurable...")
-            print(f"[MAX7219] Pines: DIN={din_pin}, CS={cs_pin}, CLK={clk_pin}")
-            print(f"[MAX7219] Configuración: módulos={num_modules}, brillo={brightness}, rotación={rotation}, orientación={orientation}")
+        # Todos los prints de log y debug han sido comentados para limpiar la consola
+        # if DEBUG_ENABLED:
+        #     print("[MAX7219] Inicializando display MAX7219 configurable...")
+        #     print(f"[MAX7219] Pines: DIN={din_pin}, CS={cs_pin}, CLK={clk_pin}")
+        #     print(f"[MAX7219] Configuración: módulos={num_modules}, brillo={brightness}, rotación={rotation}, orientación={orientation}")
         
         self.num_modules = num_modules
         self.brightness = max(0, min(15, brightness))  # Limitar a 0-15
@@ -43,8 +44,8 @@ class MAX7219DualDisplayConfigurable:
         
         self.init_display()
         
-        if DEBUG_ENABLED:
-            print("[MAX7219] Display MAX7219 inicializado correctamente")
+        # if DEBUG_ENABLED:
+        #     print("[MAX7219] Display MAX7219 inicializado correctamente")
 
     def write_register_all(self, address, data):
         """Escribe el mismo registro a todos los módulos"""
@@ -73,8 +74,8 @@ class MAX7219DualDisplayConfigurable:
 
     def init_display(self):
         """Inicializa todos los módulos"""
-        if DEBUG_ENABLED:
-            print("[MAX7219] Inicializando módulos del display...")
+        # if DEBUG_ENABLED:
+        #     print("[MAX7219] Inicializando módulos del display...")
         
         for address, data in [
             (0x09, 0x00),  # Decoding: off
@@ -83,14 +84,14 @@ class MAX7219DualDisplayConfigurable:
             (0x0C, 0x01),  # Shutdown: normal operation
             (0x0F, 0x00),  # Display test: off
         ]:
-            if DEBUG_ENABLED:
-                print(f"[MAX7219] Configurando registro 0x{address:02X} = 0x{data:02X}")
+            # if DEBUG_ENABLED:
+            #     print(f"[MAX7219] Configurando registro 0x{address:02X} = 0x{data:02X}")
             self.write_register_all(address, data)
         
         self.clear()
         
-        if DEBUG_ENABLED:
-            print("[MAX7219] Módulos inicializados y display limpiado")
+        # if DEBUG_ENABLED:
+        #     print("[MAX7219] Módulos inicializados y display limpiado")
 
     def set_brightness(self, brightness):
         """Cambia el brillo de todos los módulos"""
@@ -99,14 +100,14 @@ class MAX7219DualDisplayConfigurable:
 
     def clear(self):
         """Limpia todos los módulos"""
-        if DEBUG_ENABLED:
-            print("[MAX7219] Limpiando display...")
+        # if DEBUG_ENABLED:
+        #     print("[MAX7219] Limpiando display...")
         
         for i in range(1, 9):
             self.write_register_all(i, 0x00)
         
-        if DEBUG_ENABLED:
-            print("[MAX7219] Display limpiado")
+        # if DEBUG_ENABLED:
+        #     print("[MAX7219] Display limpiado")
 
     def rotate_pattern(self, pattern, rotation):
         """Rota un patrón según la rotación especificada"""
@@ -170,8 +171,8 @@ class MAX7219DualDisplayConfigurable:
 
     def show_two_digits(self, value):
         """Muestra un número de dos dígitos (00-99) con rotación y orientación configuradas"""
-        if DEBUG_ENABLED:
-            print(f"[MAX7219] Mostrando dos dígitos: {value}")
+        # if DEBUG_ENABLED:
+        #     print(f"[MAX7219] Mostrando dos dígitos: {value}")
         
         s = str(value)
         if len(s) == 1:
@@ -184,8 +185,8 @@ class MAX7219DualDisplayConfigurable:
         left_pattern = self.rotate_pattern(left_pattern, self.rotation)
         right_pattern = self.rotate_pattern(right_pattern, self.rotation)
         
-        if DEBUG_ENABLED:
-            print(f"[MAX7219] Patrones: izquierda='{s[0]}', derecha='{s[1]}', orientación={self.orientation}")
+        # if DEBUG_ENABLED:
+        #     print(f"[MAX7219] Patrones: izquierda='{s[0]}', derecha='{s[1]}', orientación={self.orientation}")
         
         # Aplicar orientación
         if self.orientation == 'vertical':
@@ -208,8 +209,8 @@ class MAX7219DualDisplayConfigurable:
                 self.write_register_module(0, row+1, left_pattern[row])
                 self.write_register_module(1, row+1, right_pattern[row])
         
-        if DEBUG_ENABLED:
-            print(f"[MAX7219] Dígitos {value} mostrados correctamente")
+        # if DEBUG_ENABLED:
+        #     print(f"[MAX7219] Dígitos {value} mostrados correctamente")
 
     def show_text(self, text, start_position=0):
         """Muestra texto en el display (solo números por ahora)"""
@@ -474,14 +475,14 @@ class MAX7219DualDisplayConfigurable:
             pattern: Lista de 8 bytes que representan el patrón 8x8
             interval: Intervalo de titileo en segundos (por defecto 0.5s)
         """
-        if DEBUG_ENABLED:
-            print(f"[MAX7219] Iniciando titileo de patrón (modo polling) - intervalo: {interval}s")
-            print(f"[MAX7219] Patrón recibido: {pattern}")
-            print(f"[MAX7219] Longitud del patrón: {len(pattern) if pattern else 'None'}")
+        # if DEBUG_ENABLED:
+        #     print(f"[MAX7219] Iniciando titileo de patrón (modo polling) - intervalo: {interval}s")
+        #     print(f"[MAX7219] Patrón recibido: {pattern}")
+        #     print(f"[MAX7219] Longitud del patrón: {len(pattern) if pattern else 'None'}")
         
         if self.blink_active:
-            if DEBUG_ENABLED:
-                print("[MAX7219] Titileo activo detectado, deteniendo antes de iniciar nuevo...")
+            # if DEBUG_ENABLED:
+            #     print("[MAX7219] Titileo activo detectado, deteniendo antes de iniciar nuevo...")
             self.stop_pattern_blink()
         
         self.blink_pattern = pattern
@@ -490,33 +491,33 @@ class MAX7219DualDisplayConfigurable:
         self.last_blink_time = time.time()
         self.blink_state = False
         
-        if DEBUG_ENABLED:
-            print(f"[MAX7219] Titileo iniciado correctamente (modo polling) - blink_active={self.blink_active}")
+        # if DEBUG_ENABLED:
+        #     print(f"[MAX7219] Titileo iniciado correctamente (modo polling) - blink_active={self.blink_active}")
         return True
 
     def stop_pattern_blink(self):
         """Detiene el titileo de patrones (modo polling)"""
-        if DEBUG_ENABLED:
-            print("[MAX7219] Deteniendo titileo de patrón (modo polling)...")
+        # if DEBUG_ENABLED:
+        #     print("[MAX7219] Deteniendo titileo de patrón (modo polling)...")
         
         if not self.blink_active:
-            if DEBUG_ENABLED:
-                print("[MAX7219] No hay titileo activo para detener")
+            # if DEBUG_ENABLED:
+            #     print("[MAX7219] No hay titileo activo para detener")
             return
         
-        if DEBUG_ENABLED:
-            print("[MAX7219] Marcando titileo como inactivo...")
+        # if DEBUG_ENABLED:
+        #     print("[MAX7219] Marcando titileo como inactivo...")
         self.blink_active = False
         
         # NO limpiar el display automáticamente - dejar que el contenido actual permanezca
-        if DEBUG_ENABLED:
-            print("[MAX7219] Titileo detenido correctamente (modo polling) - display no limpiado")
+        # if DEBUG_ENABLED:
+        #     print("[MAX7219] Titileo detenido correctamente (modo polling) - display no limpiado")
 
     def update_pattern_blink(self):
         """Actualiza el estado del titileo de patrones (debe ser llamado desde el bucle principal)"""
         if not self.blink_active or not self.blink_pattern:
-            if DEBUG_ENABLED:
-                print(f"[MAX7219] update_pattern_blink: blink_active={self.blink_active}, blink_pattern={self.blink_pattern is not None}")
+            # if DEBUG_ENABLED:
+            #     print(f"[MAX7219] update_pattern_blink: blink_active={self.blink_active}, blink_pattern={self.blink_pattern is not None}")
             return
         
         current_time = time.time()
@@ -526,28 +527,28 @@ class MAX7219DualDisplayConfigurable:
             
             if self.blink_state:
                 # Mostrar patrón
-                if DEBUG_ENABLED:
-                    print(f"[MAX7219] Titileo: mostrando patrón - {len(self.blink_pattern)} filas")
+                # if DEBUG_ENABLED:
+                #     print(f"[MAX7219] Titileo: mostrando patrón - {len(self.blink_pattern)} filas")
                 for row in range(8):
                     self.write_register_all(row + 1, self.blink_pattern[row])
-                if DEBUG_ENABLED:
-                    print("[MAX7219] Titileo: patrón VISIBLE")
+                # if DEBUG_ENABLED:
+                #     print("[MAX7219] Titileo: patrón VISIBLE")
             else:
                 # Limpiar display
-                if DEBUG_ENABLED:
-                    print("[MAX7219] Titileo: limpiando display...")
+                # if DEBUG_ENABLED:
+                #     print("[MAX7219] Titileo: limpiando display...")
                 self.clear()
-                if DEBUG_ENABLED:
-                    print("[MAX7219] Titileo: patrón OCULTO")
+                # if DEBUG_ENABLED:
+                #     print("[MAX7219] Titileo: patrón OCULTO")
 
     def is_blinking(self):
         """Retorna True si el display está titilando"""
-        if DEBUG_ENABLED:
-            print(f"[MAX7219] Consultando estado de titileo: {self.blink_active}")
+        # if DEBUG_ENABLED:
+        #     print(f"[MAX7219] Consultando estado de titileo: {self.blink_active}")
         return self.blink_active
 
     def set_blink_interval(self, interval):
         """Cambia el intervalo de titileo"""
-        if DEBUG_ENABLED:
-            print(f"[MAX7219] Cambiando intervalo de titileo de {self.blink_interval}s a {interval}s")
+        # if DEBUG_ENABLED:
+        #     print(f"[MAX7219] Cambiando intervalo de titileo de {self.blink_interval}s a {interval}s")
         self.blink_interval = max(0.1, interval)  # Mínimo 0.1 segundos 

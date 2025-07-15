@@ -235,12 +235,9 @@ def main():
     """Función principal con menú interactivo"""
     print("🚀 Iniciando Controlador de Carrera...")
     
-    # Inicializar controlador de carrera (usando métodos de clase)
-    RaceController.__init__(max_laps=RACE_MAX_LAPS, num_racers=1, racer_names=["Piloto 1"])
-    
-    # Inicializar sensor TCRT5000
-    sensor = Pin(SENSOR_TCRT5000_PIN, Pin.IN, Pin.PULL_UP)
-    last_sensor_state = sensor.value()
+    # Inicializar RaceController con sensor IR
+    race_controller = RaceController(max_laps=RACE_MAX_LAPS, num_racers=1, racer_names=["Piloto 1"], sensor_pin=SENSOR_TCRT5000_PIN, debounce_time=SENSOR_DEBOUNCE_TIME)
+    last_lap_count = race_controller.current_laps[0]
     
     # Conectar WiFi
     ip_address = connect_wifi()
@@ -253,25 +250,14 @@ def main():
     
     try:
         while True:
-            # Actualizar el estado del controlador (POLLING) - CRÍTICO para que funcionen los parpadeos
-            RaceController.update()
-            
-            # Manejar sensor en segundo plano
-            current_sensor_state = sensor.value()
-            if last_sensor_state == 1 and current_sensor_state == 0:
-                params = RaceController.get_race_params()
-                if params['race_state'] == 'STARTED':
-                    # Incrementar vuelta del primer corredor
-                    RaceController.current_laps[0] += 1
-                    print(f"🏁 ¡Vuelta detectada! {RaceController.current_laps[0]}/{RaceController.max_laps}")
-            last_sensor_state = current_sensor_state
-            
-            # Mostrar menú
+            race_controller.update()
+            race_controller.poll_sensor_and_update_laps()
+            current_laps = race_controller.current_laps[0]
+            if current_laps != last_lap_count:
+                print(f"🏁 ¡Vuelta detectada! {current_laps}/{race_controller.max_laps}")
+                last_lap_count = current_laps
             show_menu()
-            
-            # Obtener opción del usuario
             choice = input("Selecciona una opción: ").strip()
-            
             if choice == "1":
                 show_status()
             elif choice == "2":
@@ -297,13 +283,9 @@ def main():
                 break
             else:
                 print("❌ Opción inválida. Intenta de nuevo.")
-            
-            # Pausa para leer
             input("\nPresiona Enter para continuar...")
-            
     except KeyboardInterrupt:
         print("\n\n🛑 Deteniendo servidor...")
-        race_controller.cleanup()
         print("✅ Servidor detenido")
 
 if __name__ == "__main__":
