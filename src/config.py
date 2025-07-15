@@ -4,6 +4,7 @@
 # Configuración WiFi
 WIFI_SSID = "jrcsistemas"
 WIFI_PASSWORD = "jrcs1st3m4s"
+WIFI_CONNECT_TIMEOUT = 10  # Timeout para conexión WiFi (segundos)
 
 # Configuración del servidor
 SERVER_PORT = 8080
@@ -31,15 +32,17 @@ MAX7219_ORIENTATION = "vertical"  # "horizontal" o "vertical"
 # =============================================================================
 # CONFIGURACIÓN DE LA CARRERA
 # =============================================================================
-RACE_MAX_LAPS = 15       # Máximo número de vueltas
+RACE_MAX_LAPS = 9       # Máximo número de vueltas
+RACE_NUM_RACERS = 1      # Número de corredores por defecto
 RACE_AUTO_RESET = True    # Reiniciar automáticamente al completar
 RACE_SHOW_FLAG_ANIMATION = True  # Mostrar animación de bandera al finalizar
+RACE_START_TIMEOUT = 10   # Timeout para inicio de carrera (segundos)
 
 # =============================================================================
 # CONFIGURACIÓN DE ANIMACIONES
 # =============================================================================
 # Animación de bandera a cuadros
-FLAG_ANIMATION_DURATION = 5  # Duración en segundos
+FLAG_ANIMATION_DURATION = 15  # Duración en segundos
 FLAG_ANIMATION_SPEED = 0.2   # Velocidad de cambio (segundos)
 CHECKERED_FLAG_BLINK_INTERVAL = 0.5  # Intervalo de titileo para bandera a cuadros (segundos)
 
@@ -99,7 +102,7 @@ RACER_NAME_SCROLL_SPEED = 0.15  # Velocidad del scroll del nombre (segundos) - M
 # =============================================================================
 # CONFIGURACIÓN DE DEBUG
 # =============================================================================
-DEBUG_ENABLED = True      # Habilitar mensajes de debug
+DEBUG_ENABLED = False     # Habilitar mensajes de debug
 DEBUG_LEVEL = "INFO"      # Nivel de debug: "DEBUG", "INFO", "WARNING", "ERROR"
 
 # =============================================================================
@@ -114,6 +117,7 @@ WEB_SERVER_MAX_CONNECTIONS = 5  # Máximo número de conexiones simultáneas
 # Configuración de actualización
 WEB_UPDATE_INTERVAL = 0.1  # Intervalo de polling del titileo (100ms)
 WEB_STATUS_UPDATE_INTERVAL = 2.0  # Intervalo de actualización de estado en la web (2s)
+WEB_SERVER_UPDATE_INTERVAL = 0.1  # Intervalo de actualización del servidor web (100ms)
 
 # Configuración de memoria
 WEB_GC_INTERVAL = 100  # Ejecutar garbage collector cada 100 iteraciones

@@ -17,7 +17,7 @@ class WebServer:
         self.server_socket = None
         self.is_running = False
         self.last_update = 0
-        self.update_interval = 0.1
+        self.update_interval = WEB_SERVER_UPDATE_INTERVAL
 
     def connect_wifi(self):
         print("[WEB] Conectando a WiFi...")
@@ -26,7 +26,7 @@ class WebServer:
         if not self.wlan.isconnected():
             print(f"[WEB] Conectando a {WIFI_SSID}...")
             self.wlan.connect(WIFI_SSID, WIFI_PASSWORD)
-            max_wait = 10
+            max_wait = WIFI_CONNECT_TIMEOUT
             while max_wait > 0:
                 if self.wlan.isconnected():
                     break
