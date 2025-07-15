@@ -1,15 +1,19 @@
-# Guía de Configuración - Controlador LED
+# Guía de Configuración - Controlador de Carrera Scalextric
 
-Esta guía te ayudará a configurar el proyecto Controlador LED en tu Raspberry Pi Pico 2W.
+Esta guía te ayudará a configurar el proyecto Controlador de Carrera para pista Scalextric en tu Raspberry Pi Pico 2W.
 
 ## 📋 Requisitos Previos
 
 ### Hardware Necesario
 - Raspberry Pi Pico 2W
-- LED rojo (5mm o 3mm)
-- Resistencia de 100Ω (1/4W)
-- Cables de conexión (jumper wires)
-- Cable USB-C para conectar la Pico
+- **Sensor TCRT5000** (sensor infrarrojo para detectar vueltas)
+- **Módulo de semáforo LED** (rojo, amarillo, verde)
+- **Display MAX7219** (2 módulos en cascada para mostrar información)
+- **LED rojo** (5mm o 3mm) - opcional
+- **Resistencias** de 220Ω (1/4W) para LEDs
+- **Cables de conexión** (jumper wires)
+- **Cable USB-C** para conectar la Pico
+- **Pista Scalextric** con carro
 
 ### Software Necesario
 - Thonny IDE (recomendado) o cualquier editor de código
@@ -29,28 +33,49 @@ Esta guía te ayudará a configurar el proyecto Controlador LED en tu Raspberry 
 
 ## 🔌 Conexiones del Hardware
 
-### Diagrama de Conexión
+### Diagrama de Conexión Completo
 ```
 Raspberry Pi Pico 2W
 ┌─────────────────┐
 │                 │
-│  GP0 ──[220Ω]──┼── LED+ ── LED- ── GND
+│ GP0 ──[220Ω]──┼── LED Rojo (opcional)
+│                 │
+│ GP2 ──────────→│ CLK (MAX7219)
+│ GP3 ──────────→│ DIN (MAX7219)
+│ GP5 ──────────→│ CS  (MAX7219)
+│                 │
+│ GP11 ─────────→│ LED Rojo (Semáforo)
+│ GP12 ─────────→│ LED Amarillo (Semáforo)
+│ GP13 ─────────→│ LED Verde (Semáforo)
+│                 │
+│ GP16 ─────────→│ TCRT5000 (Sensor IR)
 │                 │
 └─────────────────┘
 ```
 
 ### Pasos de Conexión
-1. **Conectar resistencia**
-   - Un extremo de la resistencia de 220Ω al pin GP0
-   - El otro extremo al ánodo del LED (pata larga)
 
-2. **Conectar LED**
-   - El cátodo del LED (pata corta) al pin GND
-   - El ánodo ya está conectado a la resistencia
+#### 1. Display MAX7219 (2 módulos en cascada)
+- **DIN** (Data In) → GP3
+- **CS** (Chip Select) → GP5  
+- **CLK** (Clock) → GP2
+- **VCC** → 3.3V
+- **GND** → GND
 
-3. **Verificar conexiones**
-   - Asegúrate de que todas las conexiones estén firmes
-   - No debe haber cortocircuitos
+#### 2. Módulo de Semáforo
+- **LED Rojo** → GP11 (con resistencia de 220Ω)
+- **LED Amarillo** → GP12 (con resistencia de 220Ω)
+- **LED Verde** → GP13 (con resistencia de 220Ω)
+- **GND** → GND
+
+#### 3. Sensor TCRT5000
+- **VCC** → 3.3V
+- **GND** → GND
+- **OUT** → GP16
+
+#### 4. LED Rojo (opcional)
+- **Ánodo** → GP0 (con resistencia de 220Ω)
+- **Cátodo** → GND
 
 ## 💻 Configuración del Software
 
@@ -64,21 +89,28 @@ Raspberry Pi Pico 2W
 ### 2. Subir Archivos
 1. Abre cada archivo de la carpeta `src/` en Thonny
 2. Guarda cada archivo en la Pico con el mismo nombre:
-   - `main.py`
-   - `led_controller.py`
-   - `web_server.py`
-   - `race_controller.py`
-   - `max7219_display.py`
-   - `number_display.py`
-   - `lap_counter.py`
-   - `config.py`
+   - `main.py` - Archivo principal
+   - `config.py` - Configuración centralizada
+   - `race_controller.py` - Controlador de carrera
+   - `traffic_light_controller.py` - Controlador del semáforo
+   - `max7219_dual_display_configurable.py` - Controlador del display
+   - `web_server.py` - Servidor web
 
 ### 3. Configurar WiFi
-Edita el archivo `main.py` y cambia las credenciales WiFi:
+Edita el archivo `config.py` y cambia las credenciales WiFi:
 
 ```python
 WIFI_SSID = "tu-nombre-de-red"
 WIFI_PASSWORD = "tu-contraseña"
+```
+
+### 4. Configurar Parámetros de Carrera
+En `config.py` puedes ajustar:
+
+```python
+RACE_MAX_LAPS = 9        # Número de vueltas para completar
+RACE_NUM_RACERS = 1      # Número de corredores
+RACER_NAME = "Racer 1"   # Nombre del piloto
 ```
 
 ## 🚀 Ejecución
@@ -100,12 +132,34 @@ WIFI_PASSWORD = "tu-contraseña"
 
 2. **Acceder desde el navegador**
    - Abre tu navegador web
-   - Ve a `http://192.168.x.x:8080`
+   - Ve a `http://192.168.x.x:80`
    - Reemplaza con la IP real de tu Pico
 
 3. **Usar la interfaz**
-   - Haz clic en los botones para controlar el LED
-   - El estado se actualiza en tiempo real
+   - **Iniciar Carrera**: Comienza la secuencia del semáforo
+   - **Iniciar Previa**: Activa el titileo del semáforo
+   - **Detener**: Para la carrera actual
+   - **Reiniciar**: Resetea el sistema
+
+## 🏁 Funcionalidades del Sistema
+
+### Control de Carrera
+- **Secuencia automática**: Rojo → Amarillo → Verde
+- **Conteo de vueltas**: Detecta automáticamente con sensor IR
+- **Display informativo**: Muestra vueltas actuales y máximo
+- **Animación de finalización**: Bandera a cuadros al completar
+
+### Semáforo
+- **Luz roja**: Preparación (3 segundos)
+- **Luz amarilla**: Atención (3 segundos)
+- **Luz verde**: ¡Carrera iniciada!
+- **Modo previa**: Titileo para calentamiento
+
+### Display MAX7219
+- **Estado STOPPED**: Patrón circular titilando
+- **Estado PREVIOUS**: Muestra número máximo de vueltas
+- **Estado STARTED**: Muestra vueltas actuales
+- **Estado FINISHED**: Animación de bandera a cuadros
 
 ## 🔍 Solución de Problemas
 
@@ -114,14 +168,24 @@ WIFI_PASSWORD = "tu-contraseña"
 - Asegúrate de que la red WiFi esté disponible
 - Revisa la salida de la consola para errores
 
-### El LED no se enciende
-- Verifica las conexiones del hardware
-- Asegúrate de que la resistencia esté conectada
-- Comprueba que el LED esté en la orientación correcta
+### El sensor no detecta vueltas
+- Verifica las conexiones del sensor TCRT5000
+- Asegúrate de que el sensor esté bien posicionado en la pista
+- Comprueba que el carro pase por encima del sensor
+
+### El semáforo no funciona
+- Verifica las conexiones de los LEDs
+- Asegúrate de que las resistencias estén conectadas
+- Comprueba que los pines estén correctamente configurados
+
+### El display no muestra información
+- Verifica las conexiones del MAX7219
+- Comprueba que los pines DIN, CS y CLK estén bien conectados
+- Verifica la alimentación (VCC y GND)
 
 ### No se puede acceder a la interfaz web
 - Verifica que la Pico esté conectada a la misma red WiFi
-- Comprueba que el puerto 8080 no esté bloqueado
+- Comprueba que el puerto 80 no esté bloqueado
 - Intenta acceder desde otro dispositivo en la red
 
 ### Error de memoria
