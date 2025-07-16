@@ -1,8 +1,8 @@
-# 🌐 Servidor Web - Controlador de Carrera
+# 🌐 Servidor Web - Controlador de Carrera Scalextric
 
 ## Descripción
 
-El servidor web proporciona una interfaz gráfica moderna y responsiva para controlar el sistema de carrera desde cualquier dispositivo conectado a la misma red WiFi.
+El servidor web proporciona una interfaz gráfica moderna y responsiva para controlar el sistema de carrera desde cualquier dispositivo conectado a la misma red WiFi. Permite controlar el semáforo, monitorear vueltas y gestionar el estado de la carrera.
 
 ## Características
 
@@ -14,14 +14,18 @@ El servidor web proporciona una interfaz gráfica moderna y responsiva para cont
 - **Polling optimizado** que mantiene el titileo funcionando
 - **Gestión de memoria** automática
 - **Manejo de errores** robusto
+- **Control de semáforo** (inicio, previa, parada)
+- **Monitoreo de vueltas** en tiempo real
+- **Configuración centralizada** desde config.py
 
 ### 🚀 Funcionalidades
 - 🏁 Iniciar/Detener carrera
-- ⚠️ Iniciar/Detener previa (titileo)
+- ⚠️ Iniciar/Detener previa (titileo del semáforo)
 - 🔄 Reiniciar sistema
 - 💡 Controlar titileo del display
 - 🏎️ Configurar nombre del piloto
-- 📊 Monitoreo en tiempo real
+- 📊 Monitoreo en tiempo real de vueltas
+- 🚦 Control del semáforo (rojo, amarillo, verde)
 
 ## Instalación y Uso
 
@@ -31,15 +35,25 @@ Edita el archivo `config.py` y configura tus credenciales WiFi:
 ```python
 WIFI_SSID = "tu_red_wifi"
 WIFI_PASSWORD = "tu_contraseña"
+WIFI_CONNECT_TIMEOUT = 10  # Timeout para conexión WiFi
 ```
 
-### 2. Ejecutar el Servidor
+### 2. Configuración del Servidor
+En `config.py` puedes ajustar los parámetros del servidor:
+
+```python
+WEB_SERVER_PORT = 80  # Puerto estándar HTTP
+WEB_SERVER_TIMEOUT = 0.1  # Timeout no bloqueante
+WEB_UPDATE_INTERVAL = 0.1  # Intervalo de polling (100ms)
+```
+
+### 3. Ejecutar el Servidor
 ```bash
 # En el Raspberry Pi Pico W
-python src/main_web.py
+python src/main.py
 ```
 
-### 3. Acceder a la Interfaz
+### 4. Acceder a la Interfaz
 Una vez ejecutado, el servidor mostrará la dirección IP:
 ```
 [WEB] 🌐 Servidor web disponible en: http://192.168.1.100:80
@@ -51,58 +65,43 @@ Abre tu navegador y ve a esa dirección.
 
 ```
 src/
-├── main_web.py              # Archivo principal del servidor web
-├── web_server.py            # Implementación del servidor web
-├── web_config.py            # Configuración específica del servidor
-├── race_controller.py       # Controlador de carrera
-├── traffic_light_controller.py  # Controlador del semáforo
+├── main.py                           # Archivo principal
+├── web_server.py                     # Implementación del servidor web
+├── race_controller.py                # Controlador de carrera
+├── traffic_light_controller.py       # Controlador del semáforo
 ├── max7219_dual_display_configurable.py  # Controlador del display
-└── config.py                # Configuración general
+└── config.py                         # Configuración centralizada
 ```
 
 ## API REST
 
 ### Endpoints Disponibles
 
-#### GET `/api/status`
-Obtiene el estado actual del sistema.
+#### GET `/`
+Sirve la interfaz web principal.
 
-**Respuesta:**
-```json
-{
-  "success": true,
-  "race_state": "STOPPED",
-  "current_laps": [0, 0],
-  "max_laps": 15,
-  "racer_names": ["Piloto 1", "Piloto 2"],
-  "traffic_light_state": "off",
-  "blink_enabled": true
-}
-```
+#### GET `/start_race`
+Inicia la carrera con secuencia completa del semáforo.
 
-#### GET `/api/start_race`
-Inicia la carrera.
+#### GET `/stop_race`
+Detiene la carrera y reinicia el sistema.
 
-#### GET `/api/stop_race`
-Detiene la carrera.
-
-#### GET `/api/start_previous`
+#### GET `/start_previous`
 Inicia la previa (titileo del semáforo).
 
-#### GET `/api/stop_previous`
+#### GET `/stop_previous`
 Detiene la previa.
 
-#### GET `/api/reset_race`
-Reinicia el sistema.
+#### GET `/reset`
+Reinicia el sistema completo.
 
-#### GET `/api/toggle_blink`
-Alterna el titileo del display.
-
-#### GET `/api/racer_name`
-Obtiene el nombre del piloto.
-
-#### POST `/api/update_racer_name`
-Actualiza el nombre del piloto.
+### Respuestas de la API
+Todas las respuestas son texto plano con mensajes descriptivos:
+- `Carrera iniciada`
+- `Carrera detenida`
+- `Previa iniciada`
+- `Previa detenida`
+- `Parámetros reseteados`
 
 ## Optimizaciones Implementadas
 
@@ -110,57 +109,112 @@ Actualiza el nombre del piloto.
 - El servidor mantiene el polling del titileo funcionando continuamente
 - Timeout no bloqueante para aceptar conexiones
 - Actualización cada 100ms para titileo fluido
+- Integración con `race_controller.update()` y `poll_sensor_and_update_laps()`
 
 ### 2. Gestión de Memoria
 - Garbage collector automático cada 100 iteraciones
 - Liberación de recursos al cerrar conexiones
-- Límite de tamaño de solicitudes HTTP
+- Límite de tamaño de solicitudes HTTP (1024 bytes)
 
 ### 3. Manejo de Errores
 - Try-catch en todas las operaciones críticas
 - Respuestas HTTP apropiadas para errores
 - Logging de errores para debug
+- Manejo de timeouts de conexión
 
-### 4. Interfaz Responsiva
-- Diseño CSS Grid y Flexbox
-- Adaptable a móviles y tablets
-- Animaciones suaves y feedback visual
+### 4. Configuración Centralizada
+- Todas las configuraciones en `config.py`
+- Parámetros de WiFi, servidor y sistema unificados
+- Fácil modificación sin tocar código
 
 ## Configuración Avanzada
 
 ### Modificar Puerto
-Edita `web_config.py`:
+Edita `config.py`:
 ```python
 WEB_SERVER_PORT = 8080  # Cambiar puerto
 ```
 
 ### Habilitar Debug
 ```python
+DEBUG_ENABLED = True
 WEB_DEBUG_ENABLED = True
 WEB_LOG_REQUESTS = True
 ```
 
+### Configurar Timeouts
+```python
+WIFI_CONNECT_TIMEOUT = 15  # Timeout WiFi más largo
+WEB_SERVER_TIMEOUT = 0.2   # Timeout servidor más largo
+```
+
 ### Configurar CORS
 ```python
-WEB_CORS_ORIGIN = "http://localhost:3000"  # Origen específico
+WEB_ENABLE_CORS = True
+WEB_CORS_ORIGIN = "*"
+WEB_CORS_METHODS = "GET, POST, OPTIONS"
 ```
+
+## Interfaz Web
+
+### Características de la Interfaz
+- **Diseño responsivo** que funciona en móviles y tablets
+- **Botones de control** para todas las funciones
+- **Feedback visual** inmediato
+- **Compatibilidad** con todos los navegadores modernos
+
+### Funciones Disponibles
+1. **Iniciar Carrera**: Comienza la secuencia rojo → amarillo → verde
+2. **Iniciar Previa**: Activa el titileo del semáforo
+3. **Detener**: Para la carrera actual
+4. **Reiniciar**: Resetea todo el sistema
 
 ## Solución de Problemas
 
 ### El servidor no inicia
-1. Verifica la conexión WiFi
+1. Verifica la conexión WiFi en `config.py`
 2. Asegúrate de que el puerto no esté en uso
-3. Revisa los logs de debug
+3. Revisa los logs de debug habilitando `DEBUG_ENABLED = True`
 
 ### La interfaz no se carga
-1. Verifica la dirección IP mostrada
+1. Verifica la dirección IP mostrada en la consola
 2. Asegúrate de estar en la misma red WiFi
-3. Intenta desde otro navegador
+3. Intenta desde otro navegador o dispositivo
 
 ### El titileo no funciona
 1. El polling continúa funcionando en el servidor
 2. Verifica que el hardware esté conectado correctamente
 3. Revisa los logs del controlador
+
+### Error de memoria
+1. El sistema incluye garbage collector automático
+2. Reinicia la Pico si persisten los problemas
+3. Verifica que no haya otros procesos consumiendo memoria
+
+### Problemas de conexión WiFi
+1. Verifica las credenciales en `config.py`
+2. Asegúrate de que la red esté disponible
+3. Ajusta `WIFI_CONNECT_TIMEOUT` si es necesario
+
+## Integración con el Sistema
+
+### RaceController
+El servidor web se integra completamente con el `RaceController`:
+- Controla todos los estados de la carrera
+- Monitorea vueltas en tiempo real
+- Gestiona el semáforo y display
+
+### TrafficLightController
+Control directo del semáforo:
+- Secuencia automática de luces
+- Modo previa con titileo
+- Control PWM para intensidad
+
+### MAX7219Display
+Integración con el display:
+- Muestra información de carrera
+- Animaciones de finalización
+- Patrones de estado
 
 ## Próximas Mejoras
 
@@ -172,6 +226,8 @@ WEB_CORS_ORIGIN = "http://localhost:3000"  # Origen específico
 - [ ] Modo offline con cache
 - [ ] Notificaciones push
 - [ ] Integración con sensores adicionales
+- [ ] API JSON para respuestas estructuradas
+- [ ] Historial de carreras
 
 ## Contribuir
 
