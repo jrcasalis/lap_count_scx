@@ -1,0 +1,10 @@
+---
+alwaysApply: true
+---
+- El entorno es Micropython para una raspberry Pi PICO 2w.
+- Modificar siempre, no proponer para que la modificación la haga yo.
+- Mantener el código simple, No generar archivos por cualquier pequeño cambio o prueba necesaria
+
+- la aplicación consiste en un contador de vueltas para una pista scalextric, incluyendo un sensor IR TCRT5000, un módulo led de semáforo para usar a potencia máxima, y displays MAX7219 conectados uno al lado del otro para mostrar información de la carrera.
+
+- Siempre mantener el código sencillo, y lo más óptimo  para la raspberry

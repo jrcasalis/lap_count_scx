@@ -1,0 +1,8 @@
+# Configuración del servidor MCP
+MCP_SERVER_HOST=localhost
+MCP_SERVER_PORT=8000
+MCP_SERVER_DEBUG=True
+
+# Configuración de la API de Scalextric
+SCALEXTRIX_API_BASE_URL=http://192.168.1.100
+SCALEXTRIX_API_TIMEOUT=10 
