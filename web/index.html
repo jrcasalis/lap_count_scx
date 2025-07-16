@@ -5,29 +5,106 @@
     <title>Control Carrera Pico W</title>
     <style>
         body { font-family: Arial, sans-serif; background: #fafafa; margin: 0; padding: 2em; }
-        .container { max-width: 400px; margin: 2em auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 2em; text-align: center; }
+        .container { max-width: 500px; margin: 2em auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 2em; text-align: center; }
         h1 { font-size: 1.5em; margin-bottom: 1em; }
         button { margin: 0.5em 0; padding: 0.7em 2em; font-size: 1em; border: none; border-radius: 4px; background: #1976d2; color: #fff; cursor: pointer; transition: background 0.2s; }
         button:hover { background: #1565c0; }
         .msg { margin-top: 1em; color: #388e3c; font-weight: bold; }
+        .status { margin-top: 1em; padding: 1em; background: #f5f5f5; border-radius: 4px; text-align: left; }
+        .status h3 { margin-top: 0; color: #333; }
+        .status-item { margin: 0.5em 0; }
+        .progress-bar { width: 100%; height: 20px; background: #e0e0e0; border-radius: 10px; overflow: hidden; margin: 0.5em 0; }
+        .progress-fill { height: 100%; background: #4caf50; transition: width 0.3s; }
+        .error { color: #f44336; }
+        .success { color: #388e3c; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Control Carrera Pico W</h1>
-        <button onclick="accion('/start_race')">Iniciar Carrera</button><br>
-        <button onclick="accion('/stop_race')">Parar Carrera</button><br>
-        <button onclick="accion('/start_previous')">Iniciar Previa</button><br>
-        <button onclick="accion('/stop_previous')">Parar Previa</button><br>
-        <button onclick="accion('/reset')">Resetear</button>
+        <h1>🏁 Control Carrera Pico W</h1>
+        
+        <div class="status" id="status">
+            <h3>📊 Estado de la Carrera</h3>
+            <div class="status-item">Estado: <span id="raceState">Cargando...</span></div>
+            <div class="status-item">Vueltas: <span id="currentLaps">-</span> / <span id="maxLaps">-</span></div>
+            <div class="status-item">Progreso: <span id="progressPercent">-</span>%</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+            </div>
+            <div class="status-item">Semáforo: <span id="trafficLight">-</span></div>
+            <div class="status-item">Piloto: <span id="racerName">-</span></div>
+        </div>
+        
+        <button onclick="accion('/start_race')">🏁 Iniciar Carrera</button><br>
+        <button onclick="accion('/stop_race')">⏹️ Parar Carrera</button><br>
+        <button onclick="accion('/start_previous')">⚠️ Iniciar Previa</button><br>
+        <button onclick="accion('/stop_previous')">⏹️ Parar Previa</button><br>
+        <button onclick="accion('/reset')">🔄 Resetear</button>
+        
         <div class="msg" id="msg"></div>
     </div>
+    
     <script>
+        // Actualizar estado cada 2 segundos
+        setInterval(updateStatus, 2000);
+        
+        // Cargar estado inicial
+        updateStatus();
+        
+        function updateStatus() {
+            fetch('/api/status')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('raceState').textContent = data.race_state;
+                        document.getElementById('currentLaps').textContent = data.current_laps;
+                        document.getElementById('maxLaps').textContent = data.max_laps;
+                        document.getElementById('progressPercent').textContent = data.progress_percentage;
+                        document.getElementById('progressBar').style.width = data.progress_percentage + '%';
+                        document.getElementById('trafficLight').textContent = data.traffic_light_state;
+                        document.getElementById('racerName').textContent = data.racer_name;
+                        
+                        // Cambiar color según estado
+                        const stateElement = document.getElementById('raceState');
+                        stateElement.className = '';
+                        if (data.race_state === 'FINISHED') {
+                            stateElement.classList.add('success');
+                        } else if (data.race_state === 'STARTED') {
+                            stateElement.classList.add('success');
+                        }
+                    } else {
+                        document.getElementById('raceState').textContent = 'Error: ' + data.message;
+                        document.getElementById('raceState').className = 'error';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('raceState').textContent = 'Error de conexión';
+                    document.getElementById('raceState').className = 'error';
+                });
+        }
+        
         function accion(ruta) {
+            const msgElement = document.getElementById('msg');
+            msgElement.textContent = 'Enviando comando...';
+            msgElement.className = 'msg';
+            
             fetch(ruta)
-                .then(r => r.text())
-                .then(txt => { document.getElementById('msg').textContent = txt; })
-                .catch(() => { document.getElementById('msg').textContent = 'Error de conexión'; });
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        msgElement.textContent = data.message;
+                        msgElement.className = 'msg success';
+                        // Actualizar estado después de la acción
+                        setTimeout(updateStatus, 500);
+                    } else {
+                        msgElement.textContent = 'Error: ' + data.message;
+                        msgElement.className = 'msg error';
+                    }
+                })
+                .catch(error => {
+                    msgElement.textContent = 'Error de conexión';
+                    msgElement.className = 'msg error';
+                });
         }
     </script>
 </body>

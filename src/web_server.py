@@ -7,6 +7,7 @@ import network
 import socket
 import time
 import gc
+import json
 from config import *
 from race_controller import RaceController
 
@@ -93,21 +94,43 @@ class WebServer:
                             if method == 'GET':
                                 if path == '/' or path == '/index.html':
                                     response = self.serve_index()
+                                elif path == '/api/status':
+                                    response = self.json_response(self.get_race_status())
                                 elif path == '/start_race':
                                     self.controller.start_race()
-                                    response = self.text_response('Carrera iniciada')
+                                    response = self.json_response({
+                                        'success': True,
+                                        'message': 'Carrera iniciada',
+                                        'action': 'start_race'
+                                    })
                                 elif path == '/stop_race':
                                     self.controller.stop_race()
-                                    response = self.text_response('Carrera detenida')
+                                    response = self.json_response({
+                                        'success': True,
+                                        'message': 'Carrera detenida',
+                                        'action': 'stop_race'
+                                    })
                                 elif path == '/start_previous':
                                     self.controller.start_race_previous()
-                                    response = self.text_response('Previa iniciada')
+                                    response = self.json_response({
+                                        'success': True,
+                                        'message': 'Previa iniciada',
+                                        'action': 'start_previous'
+                                    })
                                 elif path == '/stop_previous':
                                     self.controller.stop_race_previous()
-                                    response = self.text_response('Previa detenida')
+                                    response = self.json_response({
+                                        'success': True,
+                                        'message': 'Previa detenida',
+                                        'action': 'stop_previous'
+                                    })
                                 elif path == '/reset':
                                     self.controller.inicializar_carrera()
-                                    response = self.text_response('Parámetros reseteados')
+                                    response = self.json_response({
+                                        'success': True,
+                                        'message': 'Parámetros reseteados',
+                                        'action': 'reset'
+                                    })
                                 else:
                                     response = self.get_404()
                             else:
@@ -125,6 +148,29 @@ class WebServer:
                 pass
             client_socket.close()
 
+    def get_race_status(self):
+        """Obtiene el estado completo de la carrera"""
+        try:
+            return {
+                'success': True,
+                'race_state': self.controller.estado_carrera,
+                'current_laps': self.controller.vueltas_actuales,
+                'max_laps': RACE_MAX_LAPS,
+                'remaining_laps': max(0, RACE_MAX_LAPS - self.controller.vueltas_actuales),
+                'progress_percentage': round((self.controller.vueltas_actuales / RACE_MAX_LAPS) * 100, 1),
+                'is_completed': self.controller.estado_carrera == 'FINISHED',
+                'traffic_light_state': self.controller.traffic_light.get_current_state(),
+                'racer_name': RACER_NAME,
+                'sensor_active': SENSOR_AUTO_INCREMENT,
+                'timestamp': time.time()
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'message': 'Error obteniendo estado de la carrera'
+            }
+
     def serve_index(self):
         try:
             with open('../web/index.html', 'r') as f:
@@ -139,7 +185,27 @@ class WebServer:
         ).format(len(html))
         return (headers + html).encode('utf-8')
 
+    def json_response(self, data):
+        """Devuelve una respuesta JSON"""
+        try:
+            body = json.dumps(data, separators=(',', ':'))
+        except Exception as e:
+            body = json.dumps({
+                'success': False,
+                'error': 'Error serializando JSON',
+                'message': str(e)
+            }, separators=(',', ':'))
+        
+        headers = (
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n"
+            "Content-Length: {}\r\n"
+            "Connection: close\r\n\r\n"
+        ).format(len(body))
+        return (headers + body).encode('utf-8')
+
     def text_response(self, msg):
+        """Devuelve una respuesta de texto plano (mantiene compatibilidad)"""
         body = msg
         headers = (
             "HTTP/1.1 200 OK\r\n"
@@ -150,20 +216,28 @@ class WebServer:
         return (headers + body).encode('utf-8')
 
     def get_404(self):
-        body = "404 Not Found"
+        body = json.dumps({
+            'success': False,
+            'error': '404 Not Found',
+            'message': 'Endpoint no encontrado'
+        }, separators=(',', ':'))
         headers = (
             "HTTP/1.1 404 Not Found\r\n"
-            "Content-Type: text/plain\r\n"
+            "Content-Type: application/json\r\n"
             "Content-Length: {}\r\n"
             "Connection: close\r\n\r\n"
         ).format(len(body))
         return (headers + body).encode('utf-8')
 
     def get_405(self):
-        body = "405 Method Not Allowed"
+        body = json.dumps({
+            'success': False,
+            'error': '405 Method Not Allowed',
+            'message': 'Método HTTP no permitido'
+        }, separators=(',', ':'))
         headers = (
             "HTTP/1.1 405 Method Not Allowed\r\n"
-            "Content-Type: text/plain\r\n"
+            "Content-Type: application/json\r\n"
             "Content-Length: {}\r\n"
             "Connection: close\r\n\r\n"
         ).format(len(body))
@@ -198,13 +272,8 @@ class WebServer:
                     print(f"[WEB] Error aceptando conexión: {e}")
                 gc.collect()
             except KeyboardInterrupt:
-                print("\n[WEB] ⏹️ Deteniendo servidor...")
                 break
-            except Exception as e:
-                print(f"[WEB] Error en bucle principal: {e}")
-                time.sleep(1)
         self.stop_server()
-        return True
 
 def start_web_server():
     # Assuming RaceController is available globally or passed as an argument
