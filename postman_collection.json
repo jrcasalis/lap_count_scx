@@ -1,0 +1,123 @@
+{
+  "info": {
+    "_postman_id": "lap-counter-pico-w-collection",
+    "name": "Lap Counter Pico W API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Obtener estado de la carrera",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/status",
+          "host": ["{{base_url}}"],
+          "path": ["api", "status"]
+        }
+      }
+    },
+    {
+      "name": "Iniciar carrera",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/start_race",
+          "host": ["{{base_url}}"],
+          "path": ["start_race"]
+        }
+      }
+    },
+    {
+      "name": "Parar carrera",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/stop_race",
+          "host": ["{{base_url}}"],
+          "path": ["stop_race"]
+        }
+      }
+    },
+    {
+      "name": "Iniciar previa",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/start_previous",
+          "host": ["{{base_url}}"],
+          "path": ["start_previous"]
+        }
+      }
+    },
+    {
+      "name": "Parar previa",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/stop_previous",
+          "host": ["{{base_url}}"],
+          "path": ["stop_previous"]
+        }
+      }
+    },
+    {
+      "name": "Resetear carrera",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/reset",
+          "host": ["{{base_url}}"],
+          "path": ["reset"]
+        }
+      }
+    },
+    {
+      "name": "Obtener script.js",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/script.js",
+          "host": ["{{base_url}}"],
+          "path": ["script.js"]
+        }
+      }
+    },
+    {
+      "name": "Obtener favicon.ico",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/favicon.ico",
+          "host": ["{{base_url}}"],
+          "path": ["favicon.ico"]
+        }
+      }
+    },
+    {
+      "name": "Obtener index.html",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/",
+          "host": ["{{base_url}}"],
+          "path": [""]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://192.168.1.100"
+    }
+  ]
+} 

@@ -1,6 +1,13 @@
 # Configuración del Sistema de Contador de Vueltas
 # Raspberry Pi Pico 2W
 
+# =============================================================================
+# CONFIGURACIÓN DE MODO DE OPERACIÓN
+# =============================================================================
+# Modo de operación del sistema
+SERVER_ONLY_MODE = True  # True = Solo servidor API, False = Con interfaz web
+ENABLE_WEB_INTERFACE = False  # Habilitar interfaz web (solo si SERVER_ONLY_MODE = False)
+
 # Configuración WiFi
 WIFI_SSID = "jrcsistemas"
 WIFI_PASSWORD = "jrcs1st3m4s"

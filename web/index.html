@@ -5,30 +5,36 @@
     <title>Control Carrera Pico W</title>
     <style>
         body { font-family: Arial, sans-serif; background: #fafafa; margin: 0; padding: 2em; }
-        .container { max-width: 400px; margin: 2em auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 2em; text-align: center; }
+        .container { max-width: 500px; margin: 2em auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 2em; text-align: center; }
         h1 { font-size: 1.5em; margin-bottom: 1em; }
         button { margin: 0.5em 0; padding: 0.7em 2em; font-size: 1em; border: none; border-radius: 4px; background: #1976d2; color: #fff; cursor: pointer; transition: background 0.2s; }
         button:hover { background: #1565c0; }
         .msg { margin-top: 1em; color: #388e3c; font-weight: bold; }
+        .error { color: #f44336; }
+        .success { color: #388e3c; }
+        .loading { color: #ff9800; }
+        .test-btn { background: #ff9800 !important; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Control Carrera Pico W</h1>
-        <button onclick="accion('/start_race')">Iniciar Carrera</button><br>
-        <button onclick="accion('/stop_race')">Parar Carrera</button><br>
-        <button onclick="accion('/start_previous')">Iniciar Previa</button><br>
-        <button onclick="accion('/stop_previous')">Parar Previa</button><br>
-        <button onclick="accion('/reset')">Resetear</button>
-        <div class="msg" id="msg"></div>
+        <h1>🏁 Control Carrera Pico W</h1>
+        
+        <button onclick="testSimple()" class="test-btn">🧪 Test Simple</button><br>
+        <button onclick="testFetch()" class="test-btn">🔗 Test Fetch</button><br>
+        
+        <hr style="margin: 1em 0;">
+        
+        <button onclick="accion('/start_race')">🏁 Iniciar Carrera</button><br>
+        <button onclick="accion('/stop_race')">⏹️ Parar Carrera</button><br>
+        <button onclick="accion('/start_previous')">⚠️ Iniciar Previa</button><br>
+        <button onclick="accion('/stop_previous')">⏹️ Parar Previa</button><br>
+        <button onclick="accion('/reset')">🔄 Resetear</button>
+        
+        <div class="msg" id="msg">Cargando...</div>
     </div>
-    <script>
-        function accion(ruta) {
-            fetch(ruta)
-                .then(r => r.text())
-                .then(txt => { document.getElementById('msg').textContent = txt; })
-                .catch(() => { document.getElementById('msg').textContent = 'Error de conexión'; });
-        }
-    </script>
+    
+    <!-- Cargar JavaScript externo -->
+    <script src="/script.js"></script>
 </body>
 </html> 
