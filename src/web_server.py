@@ -76,33 +76,63 @@ class WebServer:
                 request = ''
             if not request:
                 response = self.get_404()
+                client_socket.sendall(response)
             else:
                 print(f"[WEB] Solicitud de {address}: {request.split()[0]} {request.split()[1]}")
                 lines = request.split('\n')
                 if len(lines) < 1:
                     response = self.get_404()
+                    client_socket.sendall(response)
                 else:
                     request_line = lines[0].strip()
                     if not request_line:
                         response = self.get_404()
+                        client_socket.sendall(response)
                     else:
                         try:
                             method, path, _ = request_line.split(' ', 2)
                         except Exception:
                             response = self.get_404()
+                            client_socket.sendall(response)
                         else:
                             if method == 'GET':
                                 if path == '/' or path == '/index.html':
-                                    response = self.serve_index()
+                                    _, send_index_streaming = self.serve_index()
+                                    send_index_streaming(client_socket)
+                                elif path == '/favicon.ico':
+                                    response = self.serve_favicon()
+                                    client_socket.sendall(response)
+                                elif path == '/script.js':
+                                    response = self.serve_script()
+                                    client_socket.sendall(response)
                                 elif path == '/api/status':
                                     response = self.json_response(self.get_race_status())
+                                    client_socket.sendall(response)
                                 elif path == '/start_race':
-                                    self.controller.start_race()
-                                    response = self.json_response({
-                                        'success': True,
-                                        'message': 'Carrera iniciada',
-                                        'action': 'start_race'
-                                    })
+                                    try:
+                                        ok = self.controller.start_race()
+                                        if ok:
+                                            response = self.json_response({
+                                                'success': True,
+                                                'message': 'Carrera iniciada',
+                                                'action': 'start_race'
+                                            })
+                                        else:
+                                            response = self.json_response({
+                                                'success': False,
+                                                'message': 'No se pudo iniciar la carrera',
+                                                'action': 'start_race',
+                                                'error': 'Error en RaceController o semáforo'
+                                            })
+                                    except Exception as e:
+                                        print(f"[WEB] Error en /start_race: {e}")
+                                        response = self.json_response({
+                                            'success': False,
+                                            'message': 'Excepción en start_race',
+                                            'error': str(e),
+                                            'action': 'start_race'
+                                        })
+                                    client_socket.sendall(response)
                                 elif path == '/stop_race':
                                     self.controller.stop_race()
                                     response = self.json_response({
@@ -110,6 +140,7 @@ class WebServer:
                                         'message': 'Carrera detenida',
                                         'action': 'stop_race'
                                     })
+                                    client_socket.sendall(response)
                                 elif path == '/start_previous':
                                     self.controller.start_race_previous()
                                     response = self.json_response({
@@ -117,6 +148,7 @@ class WebServer:
                                         'message': 'Previa iniciada',
                                         'action': 'start_previous'
                                     })
+                                    client_socket.sendall(response)
                                 elif path == '/stop_previous':
                                     self.controller.stop_race_previous()
                                     response = self.json_response({
@@ -125,17 +157,27 @@ class WebServer:
                                         'action': 'stop_previous'
                                     })
                                 elif path == '/reset':
-                                    self.controller.inicializar_carrera()
-                                    response = self.json_response({
-                                        'success': True,
-                                        'message': 'Parámetros reseteados',
-                                        'action': 'reset'
-                                    })
+                                    try:
+                                        self.controller.inicializar_carrera()
+                                        response = self.json_response({
+                                            'success': True,
+                                            'message': 'Parámetros reseteados',
+                                            'action': 'reset'
+                                        })
+                                    except Exception as e:
+                                        response = self.json_response({
+                                            'success': False,
+                                            'error': str(e),
+                                            'message': 'Error al resetear parámetros',
+                                            'action': 'reset'
+                                        })
+                                    client_socket.sendall(response)
                                 else:
                                     response = self.get_404()
+                                    client_socket.sendall(response)
                             else:
                                 response = self.get_405()
-            client_socket.sendall(response)
+                                client_socket.sendall(response)
         except Exception as e:
             print(f"[WEB] Error manejando solicitud: {e}")
         finally:
@@ -151,15 +193,18 @@ class WebServer:
     def get_race_status(self):
         """Obtiene el estado completo de la carrera"""
         try:
+            # Usar el primer corredor (índice 0) para compatibilidad
+            current_laps = self.controller.current_laps[0] if self.controller.current_laps else 0
+            max_laps = RACE_MAX_LAPS
             return {
                 'success': True,
-                'race_state': self.controller.estado_carrera,
-                'current_laps': self.controller.vueltas_actuales,
-                'max_laps': RACE_MAX_LAPS,
-                'remaining_laps': max(0, RACE_MAX_LAPS - self.controller.vueltas_actuales),
-                'progress_percentage': round((self.controller.vueltas_actuales / RACE_MAX_LAPS) * 100, 1),
-                'is_completed': self.controller.estado_carrera == 'FINISHED',
-                'traffic_light_state': self.controller.traffic_light.get_current_state(),
+                'race_state': self.controller.race_state,
+                'current_laps': current_laps,
+                'max_laps': max_laps,
+                'remaining_laps': max(0, max_laps - current_laps),
+                'progress_percentage': round((current_laps / max_laps) * 100, 1) if max_laps else 0,
+                'is_completed': self.controller.race_state == 'FINISHED',
+                'traffic_light_state': self.controller.traffic_light.get_status() if self.controller.traffic_light else None,
                 'racer_name': RACER_NAME,
                 'sensor_active': SENSOR_AUTO_INCREMENT,
                 'timestamp': time.time()
@@ -172,18 +217,56 @@ class WebServer:
             }
 
     def serve_index(self):
-        try:
-            with open('../web/index.html', 'r') as f:
-                html = f.read()
-        except Exception:
-            html = "<html><body>Error cargando index.html</body></html>"
+        def send_index_streaming(sock):
+            try:
+                print(f"[WEB] Streaming archivo HTML desde: web/index.html")
+                headers = (
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Type: text/html\r\n"
+                    "Connection: close\r\n\r\n"
+                )
+                sock.sendall(headers.encode('utf-8'))
+                with open('web/index.html', 'r') as f:
+                    for line in f:
+                        sock.sendall(line.encode('utf-8'))
+                print(f"[WEB] HTML enviado por streaming")
+            except Exception as e:
+                print(f"[WEB] Error en streaming HTML: {e}")
+                error_html = f"<html><body>Error cargando index.html: {e}</body></html>"
+                sock.sendall(error_html.encode('utf-8'))
+        return None, send_index_streaming
+
+    def serve_favicon(self):
+        """Sirve un favicon básico (1x1 pixel transparente)"""
+        # Favicon básico de 1x1 pixel transparente en formato ICO
+        favicon_data = b'\x00\x00\x01\x00\x01\x00\x01\x01\x00\x00\x01\x00\x18\x00\x28\x00\x00\x00\x16\x00\x00\x00\x28\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x01\x00\x18\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+        
         headers = (
             "HTTP/1.1 200 OK\r\n"
-            "Content-Type: text/html\r\n"
+            "Content-Type: image/x-icon\r\n"
             "Content-Length: {}\r\n"
             "Connection: close\r\n\r\n"
-        ).format(len(html))
-        return (headers + html).encode('utf-8')
+        ).format(len(favicon_data))
+        return headers.encode('utf-8') + favicon_data
+
+    def serve_script(self):
+        """Sirve el archivo JavaScript"""
+        try:
+            print(f"[WEB] Intentando cargar JavaScript desde: web/script.js")
+            with open('web/script.js', 'r') as f:
+                script = f.read()
+            print(f"[WEB] JavaScript cargado correctamente ({len(script)} caracteres)")
+        except Exception as e:
+            print(f"[WEB] Error cargando JavaScript: {e}")
+            script = "console.error('Error cargando script.js: " + str(e) + "');"
+        
+        headers = (
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/javascript\r\n"
+            "Content-Length: {}\r\n"
+            "Connection: close\r\n\r\n"
+        ).format(len(script))
+        return (headers + script).encode('utf-8')
 
     def json_response(self, data):
         """Devuelve una respuesta JSON"""
